@@ -34,6 +34,7 @@ function baseHeaders(): Record<string, string> {
   return {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    'Accept-Language': 'en',
     ...(session.token ? { Authorization: session.token } : {}),
     Cookie: cookieHeader(),
   };
