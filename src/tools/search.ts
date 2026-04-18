@@ -98,17 +98,6 @@ export const searchTools: Tool[] = [
       },
     },
   },
-  {
-    name: 'get_user_profile',
-    description: "Get a member's public profile on HomeExchange.",
-    inputSchema: {
-      type: 'object',
-      required: ['user_id'],
-      properties: {
-        user_id: { type: 'string', description: 'Numeric user ID' },
-      },
-    },
-  },
 ];
 
 type Args = Record<string, unknown>;
@@ -164,9 +153,6 @@ export async function handleSearch(name: string, args: Args): Promise<unknown> {
       const limit = (args['limit'] as number | undefined) ?? 100;
       return api.bff('/search/saved-searches', { limit: String(limit) });
     }
-
-    case 'get_user_profile':
-      return api.bff(`/users/${args['user_id'] as string}`);
 
     default:
       throw new Error(`Unknown search tool: ${name}`);

@@ -7,10 +7,12 @@ import {
 
 import { searchTools, handleSearch } from './tools/search';
 import { messagingTools, handleMessaging } from './tools/messaging';
+import { userTools, handleUser } from './tools/user';
 
-const ALL_TOOLS = [...searchTools, ...messagingTools];
+const ALL_TOOLS = [...searchTools, ...messagingTools, ...userTools];
 const SEARCH_NAMES = new Set(searchTools.map((t) => t.name));
 const MESSAGING_NAMES = new Set(messagingTools.map((t) => t.name));
+const USER_NAMES = new Set(userTools.map((t) => t.name));
 
 const server = new Server(
   { name: 'homeexchange', version: '1.0.0' },
@@ -31,6 +33,8 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       result = await handleSearch(name, args as Record<string, unknown>);
     } else if (MESSAGING_NAMES.has(name)) {
       result = await handleMessaging(name, args as Record<string, unknown>);
+    } else if (USER_NAMES.has(name)) {
+      result = await handleUser(name, args as Record<string, unknown>);
     } else {
       throw new Error(`Unknown tool: ${name}`);
     }
