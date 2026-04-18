@@ -42,8 +42,41 @@ export const messagingTools: Tool[] = [
     },
   },
   {
+    name: 'get_exchange_request',
+    description: 'Get exchange request details for a conversation.',
+    inputSchema: {
+      type: 'object',
+      required: ['conversation_id'],
+      properties: {
+        conversation_id: { type: 'string', description: 'Conversation ID' },
+      },
+    },
+  },
+  {
     name: 'get_messages',
     description: 'Get all messages of a conversation.',
+    inputSchema: {
+      type: 'object',
+      required: ['conversation_id'],
+      properties: {
+        conversation_id: { type: 'string', description: 'Conversation ID' },
+      },
+    },
+  },
+  {
+    name: 'pre_approve_exchange',
+    description: 'Pre-approve an exchange request.',
+    inputSchema: {
+      type: 'object',
+      required: ['conversation_id'],
+      properties: {
+        conversation_id: { type: 'string', description: 'Conversation ID' },
+      },
+    },
+  },
+  {
+    name: 'archive_conversation',
+    description: 'Archive a conversation.',
     inputSchema: {
       type: 'object',
       required: ['conversation_id'],
@@ -80,6 +113,15 @@ export async function handleMessaging(name: string, args: Args): Promise<unknown
 
     case 'get_conversation':
       return api.bff(`/v3/conversations/me/${args['conversation_id'] as string}`);
+
+    case 'pre_approve_exchange':
+      return api.bffPatch(`/exchange/${args['conversation_id'] as string}/pre-approve`);
+
+    case 'archive_conversation':
+      return api.bffPatch(`/v1/conversations/${args['conversation_id'] as string}/archive`);
+
+    case 'get_exchange_request':
+      return api.bff(`/exchange/v2/${args['conversation_id'] as string}`);
 
     case 'get_messages':
       return api.bff('/v3/messages', { conversation_id: args['conversation_id'] as string });
