@@ -14,13 +14,13 @@ export const messagingTools: Tool[] = [
           description: 'Filter conversations (default ALL)',
         },
         limit: { type: 'number', description: 'Number to return (default 20)' },
-        after:  { type: 'string', description: 'Pagination cursor (from previous response)' },
+        after: { type: 'string', description: 'Pagination cursor (from previous response)' },
       },
     },
   },
   {
     name: 'get_conversation',
-    description: 'Get all messages in a conversation thread.',
+    description: 'Get extended information about a conversation.',
     inputSchema: {
       type: 'object',
       required: ['conversation_id'],
@@ -42,6 +42,17 @@ export const messagingTools: Tool[] = [
     },
   },
   {
+    name: 'get_messages',
+    description: 'Get all messages of a conversation.',
+    inputSchema: {
+      type: 'object',
+      required: ['conversation_id'],
+      properties: {
+        conversation_id: { type: 'string', description: 'Conversation ID' },
+      },
+    },
+  },
+  {
     name: 'start_conversation',
     description: 'Start a new conversation with a member about their home.',
     inputSchema: {
@@ -49,7 +60,7 @@ export const messagingTools: Tool[] = [
       required: ['home_id', 'text'],
       properties: {
         home_id: { type: 'string', description: 'The home you are enquiring about' },
-        text:    { type: 'string', description: 'Opening message' },
+        text: { type: 'string', description: 'Opening message' },
       },
     },
   },
@@ -61,14 +72,17 @@ export async function handleMessaging(name: string, args: Args): Promise<unknown
   switch (name) {
     case 'list_conversations': {
       const filter = (args['filter'] as string | undefined) ?? 'ALL';
-      const limit  = (args['limit']  as number | undefined) ?? 20;
+      const limit = (args['limit'] as number | undefined) ?? 20;
       const params: Record<string, string> = { filter, first: String(limit) };
       if (args['after'] !== undefined) params['after'] = args['after'] as string;
       return api.bff('/v3/conversations/me', params);
     }
 
     case 'get_conversation':
-      return api.bff(`/v3/conversations/${args['conversation_id'] as string}`);
+      return api.bff(`/v3/conversations/me/${args['conversation_id'] as string}`);
+
+    case 'get_messages':
+      return api.bff('/v3/messages', { conversation_id: args['conversation_id'] as string });
 
     case 'send_message':
       return api.bffPost(
