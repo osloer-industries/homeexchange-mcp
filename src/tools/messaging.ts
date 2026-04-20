@@ -127,10 +127,10 @@ export async function handleMessaging(name: string, args: Args): Promise<unknown
       return api.bff('/v3/messages', { conversation_id: args['conversation_id'] as string });
 
     case 'send_message':
-      return api.bffPost(
-        `/v3/conversations/${args['conversation_id'] as string}/messages`,
-        { text: args['text'] }
-      );
+      return api.bffPost('/v1/messages', {
+        content: args['text'],
+        conversation: Number(args['conversation_id']),
+      });
 
     case 'start_conversation':
       return api.bffPost('/v3/conversations', {
