@@ -5,7 +5,7 @@ import * as path from 'path';
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
 
 async function login() {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: false, channel: 'chrome', args: ['--disable-blink-features=AutomationControlled'] });
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
 

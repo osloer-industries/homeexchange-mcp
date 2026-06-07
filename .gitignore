@@ -4,3 +4,4 @@ session.json
 *.har
 api-map.json
 .worktrees/
+.gstack/
