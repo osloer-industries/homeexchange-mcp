@@ -1,6 +1,7 @@
 import { chromium, type Browser, type BrowserContext } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
+import { isHomeExchangeApiUrl } from './security';
 
 const sessionPath = path.resolve(__dirname, '../session.json');
 
@@ -8,11 +9,6 @@ let browser: Browser | null = null;
 let ctx: BrowserContext | null = null;
 let userId: string | null = null;
 const capturedHeaders: Record<string, string> = {};
-
-function isHomeExchangeApi(url: URL): boolean {
-  return url.protocol === 'https:' &&
-    (url.hostname === 'api.homeexchange.com' || url.hostname === 'bff.homeexchange.com');
-}
 
 process.on('SIGINT', () => { void saveAndExit(); });
 process.on('SIGTERM', () => { void saveAndExit(); });
@@ -36,7 +32,7 @@ async function record() {
 
   page.on('request', (req) => {
     const url = new URL(req.url());
-    const isApi = isHomeExchangeApi(url);
+    const isApi = isHomeExchangeApiUrl(url);
 
     if (isApi) {
       // Capture any interesting auth headers
@@ -61,7 +57,7 @@ async function record() {
 
   page.on('response', (res) => {
     const url = new URL(res.request().url());
-    if (isHomeExchangeApi(url)) {
+    if (isHomeExchangeApiUrl(url)) {
       console.log(`← ${res.status()} ${url.toString()}`);
     }
   });

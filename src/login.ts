@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
+import { isHomeExchangeHostname } from './security';
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
 
@@ -17,7 +18,7 @@ async function login() {
 
   page.on('request', (req) => {
     const url = new URL(req.url());
-    if (url.hostname !== 'homeexchange.com' && !url.hostname.endsWith('.homeexchange.com')) return;
+    if (!isHomeExchangeHostname(url.hostname)) return;
 
     const auth = req.headers()['authorization'];
     if (auth && auth !== 'Bearer undefined' && !token) {

@@ -1,5 +1,6 @@
 node_modules/
 dist/
+coverage/
 session.json
 *.har
 api-map.json

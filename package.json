@@ -3,11 +3,12 @@
   "version": "0.0.1",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "record": "ts-node src/record.ts",
+    "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "check": "npm run typecheck && npm run lint",
+    "check": "npm run typecheck && npm run lint && npm test",
     "analyze": "ts-node src/analyze.ts",
     "login": "ts-node src/login.ts",
     "mcp": "ts-node src/mcp.ts"
@@ -23,11 +24,13 @@
     "@types/node": "25.4.0",
     "@typescript-eslint/eslint-plugin": "8.66.0",
     "@typescript-eslint/parser": "8.66.0",
+    "@vitest/coverage-v8": "4.1.10",
     "conventional-changelog-conventionalcommits": "9.3.0",
     "eslint": "10.0.3",
     "semantic-release": "25.0.8",
     "ts-node": "10.9.2",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

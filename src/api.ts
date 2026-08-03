@@ -1,11 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { isHomeExchangeApiUrl, isHomeExchangeHostname } from './security';
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
-const API_ORIGINS = new Set([
-  'https://api.homeexchange.com',
-  'https://bff.homeexchange.com',
-]);
 
 interface Session {
   token: string | null;
@@ -27,8 +24,7 @@ export const userId = session.userId;
 function cookieHeader(): string {
   return session.cookies
     .filter((c) => {
-      const domain = c.domain.toLowerCase().replace(/^\./, '');
-      return domain === 'homeexchange.com' || domain.endsWith('.homeexchange.com');
+      return isHomeExchangeHostname(c.domain);
     })
     .map((c) => `${c.name}=${c.value}`)
     .join('; ');
@@ -55,7 +51,7 @@ function mergeHeaders(base: Record<string, string>, override?: RequestInit['head
 }
 
 async function request<T>(url: URL, init: RequestInit = {}): Promise<T> {
-  if (!API_ORIGINS.has(url.origin)) {
+  if (!isHomeExchangeApiUrl(url)) {
     throw new Error(`Refusing request to untrusted origin: ${url.origin}`);
   }
 
