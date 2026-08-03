@@ -9,6 +9,11 @@ let ctx: BrowserContext | null = null;
 let userId: string | null = null;
 const capturedHeaders: Record<string, string> = {};
 
+function isHomeExchangeApi(url: URL): boolean {
+  return url.protocol === 'https:' &&
+    (url.hostname === 'api.homeexchange.com' || url.hostname === 'bff.homeexchange.com');
+}
+
 process.on('SIGINT', () => { void saveAndExit(); });
 process.on('SIGTERM', () => { void saveAndExit(); });
 
@@ -30,8 +35,8 @@ async function record() {
   const page = await ctx.newPage();
 
   page.on('request', (req) => {
-    const url = req.url();
-    const isApi = url.includes('api.homeexchange.com') || url.includes('bff.homeexchange.com');
+    const url = new URL(req.url());
+    const isApi = isHomeExchangeApi(url);
 
     if (isApi) {
       // Capture any interesting auth headers
@@ -46,18 +51,18 @@ async function record() {
 
       // Extract user ID from URLs like /users/3778496
       if (!userId) {
-        const match = url.match(/\/(?:users|members)\/(\d+)/);
+        const match = url.pathname.match(/\/(?:users|members)\/(\d+)/);
         if (match) userId = match[1] ?? null;
       }
 
-      console.log(`→ ${req.method()} ${url}`);
+      console.log(`→ ${req.method()} ${url.toString()}`);
     }
   });
 
   page.on('response', (res) => {
-    const url = res.request().url();
-    if (url.includes('api.homeexchange.com') || url.includes('bff.homeexchange.com')) {
-      console.log(`← ${res.status()} ${url}`);
+    const url = new URL(res.request().url());
+    if (isHomeExchangeApi(url)) {
+      console.log(`← ${res.status()} ${url.toString()}`);
     }
   });
 
