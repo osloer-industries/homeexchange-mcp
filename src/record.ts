@@ -47,7 +47,7 @@ async function record() {
 
       // Extract user ID from URLs like /users/3778496
       if (!userId) {
-        const match = url.pathname.match(/\/(?:users|members)\/(\d+)/);
+        const match = /\/(?:users|members)\/(\d+)/.exec(url.pathname);
         if (match) userId = match[1] ?? null;
       }
 

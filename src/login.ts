@@ -27,7 +27,7 @@ async function login() {
     }
 
     if (!userId) {
-      const match = url.pathname.match(/\/(?:users|members)\/(\d+)/);
+      const match = /\/(?:users|members)\/(\d+)/.exec(url.pathname);
       if (match?.[1]) {
         userId = match[1];
         console.log(`✅ User ID: ${userId}`);
