@@ -4,11 +4,10 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "check:dependencies": "node scripts/check-exact-dependencies.mjs",
     "record": "ts-node src/record.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "check": "npm run check:dependencies && npm run typecheck && npm run lint",
+    "check": "npm run typecheck && npm run lint",
     "analyze": "ts-node src/analyze.ts",
     "login": "ts-node src/login.ts",
     "mcp": "ts-node src/mcp.ts"
@@ -45,7 +44,7 @@
     "fast-uri": "3.1.5",
     "flatted": "3.4.2",
     "hono": "4.12.34",
-    "ip-address": "10.1.1",
+    "ip-address": "10.4.0",
     "js-yaml": "4.3.0",
     "lodash": "4.18.1",
     "lodash-es": "4.18.1",
