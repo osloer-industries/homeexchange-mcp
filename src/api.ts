@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { isHomeExchangeApiUrl, isHomeExchangeHostname } from './security';
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
 
@@ -22,7 +23,9 @@ export const userId = session.userId;
 
 function cookieHeader(): string {
   return session.cookies
-    .filter((c) => c.domain?.includes('homeexchange.com'))
+    .filter((c) => {
+      return isHomeExchangeHostname(c.domain);
+    })
     .map((c) => `${c.name}=${c.value}`)
     .join('; ');
 }
@@ -47,7 +50,11 @@ function mergeHeaders(base: Record<string, string>, override?: RequestInit['head
   return { ...base, ...(Object.fromEntries(entries) as Record<string, string>) };
 }
 
-async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(url: URL, init: RequestInit = {}): Promise<T> {
+  if (!isHomeExchangeApiUrl(url)) {
+    throw new Error(`Refusing request to untrusted origin: ${url.origin}`);
+  }
+
   const res = await fetch(url, {
     ...init,
     headers: mergeHeaders(baseHeaders(), init.headers),
@@ -69,30 +76,30 @@ export const api = {
   bff<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
     const url = new URL(`https://bff.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url.toString());
+    return request<T>(url);
   },
 
   bffPost<T>(endpoint: string, body: unknown, params?: Record<string, string>): Promise<T> {
     const url = new URL(`https://bff.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url.toString(), { method: 'POST', body: JSON.stringify(body) });
+    return request<T>(url, { method: 'POST', body: JSON.stringify(body) });
   },
 
   get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
     const url = new URL(`https://api.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url.toString());
+    return request<T>(url);
   },
 
   post<T>(endpoint: string, body: unknown, params?: Record<string, string>): Promise<T> {
     const url = new URL(`https://api.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url.toString(), { method: 'POST', body: JSON.stringify(body) });
+    return request<T>(url, { method: 'POST', body: JSON.stringify(body) });
   },
 
   del<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
     const url = new URL(`https://api.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url.toString(), { method: 'DELETE' });
+    return request<T>(url, { method: 'DELETE' });
   },
 };
