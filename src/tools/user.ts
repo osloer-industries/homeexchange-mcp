@@ -1,40 +1,23 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { api } from '../api';
+import { requiredStringTool } from './tool-schema';
 
 export const userTools: Tool[] = [
-  {
-    name: 'get_user_profile',
-    description: "Get a member's public profile on HomeExchange.",
-    inputSchema: {
-      type: 'object',
-      required: ['user_id'],
-      properties: {
-        user_id: { type: 'string', description: 'Numeric user ID' },
-      },
-    },
-  },
-  {
-    name: 'get_user_achievements',
-    description: "Get achievements for a HomeExchange member.",
-    inputSchema: {
-      type: 'object',
-      required: ['user_id'],
-      properties: {
-        user_id: { type: 'string', description: 'Numeric user ID' },
-      },
-    },
-  },
-  {
-    name: 'get_user_ratings',
-    description: "Get ratings left for a HomeExchange member.",
-    inputSchema: {
-      type: 'object',
-      required: ['user_id'],
-      properties: {
-        user_id: { type: 'string', description: 'Numeric user ID' },
-      },
-    },
-  },
+  requiredStringTool(
+    'get_user_profile',
+    "Get a member's public profile on HomeExchange.",
+    { user_id: 'Numeric user ID' }
+  ),
+  requiredStringTool(
+    'get_user_achievements',
+    'Get achievements for a HomeExchange member.',
+    { user_id: 'Numeric user ID' }
+  ),
+  requiredStringTool(
+    'get_user_ratings',
+    'Get ratings left for a HomeExchange member.',
+    { user_id: 'Numeric user ID' }
+  ),
 ];
 
 type Args = Record<string, unknown>;
