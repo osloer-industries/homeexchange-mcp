@@ -34,7 +34,11 @@ jobs:
         run: npm run check
 
       - name: SonarCloud scan
-        if: github.actor != 'dependabot[bot]'
+        # Repository secrets are intentionally unavailable to fork pull requests.
+        if: >-
+          github.actor != 'dependabot[bot]' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
         uses: SonarSource/sonarqube-scan-action@v8.2.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
