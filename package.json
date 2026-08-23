@@ -19,15 +19,11 @@
   "description": "Unofficial local MCP server for HomeExchange",
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@semantic-release/changelog": "6.0.3",
-    "@semantic-release/git": "10.0.1",
     "@types/node": "25.4.0",
     "@typescript-eslint/eslint-plugin": "8.66.0",
     "@typescript-eslint/parser": "8.66.0",
     "@vitest/coverage-v8": "4.1.10",
-    "conventional-changelog-conventionalcommits": "9.3.0",
     "eslint": "10.0.3",
-    "semantic-release": "25.0.8",
     "ts-node": "10.9.2",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
@@ -52,6 +48,7 @@
     "lodash": "4.18.1",
     "lodash-es": "4.18.1",
     "minimatch": "10.2.4",
+    "nanoid": "3.3.18",
     "micromatch": {
       "picomatch": "2.3.2"
     },
