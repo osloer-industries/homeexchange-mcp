@@ -1,5 +1,6 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { api } from '../api';
+import { requiredStringTool } from './tool-schema';
 
 export const messagingTools: Tool[] = [
   {
@@ -18,85 +19,41 @@ export const messagingTools: Tool[] = [
       },
     },
   },
-  {
-    name: 'get_conversation',
-    description: 'Get extended information about a conversation.',
-    inputSchema: {
-      type: 'object',
-      required: ['conversation_id'],
-      properties: {
-        conversation_id: { type: 'string', description: 'Conversation ID' },
-      },
-    },
-  },
-  {
-    name: 'send_message',
-    description: 'Send a message in an existing conversation.',
-    inputSchema: {
-      type: 'object',
-      required: ['conversation_id', 'text'],
-      properties: {
-        conversation_id: { type: 'string', description: 'Conversation ID' },
-        text: { type: 'string', description: 'Message text to send' },
-      },
-    },
-  },
-  {
-    name: 'get_exchange_request',
-    description: 'Get exchange request details for a conversation.',
-    inputSchema: {
-      type: 'object',
-      required: ['conversation_id'],
-      properties: {
-        conversation_id: { type: 'string', description: 'Conversation ID' },
-      },
-    },
-  },
-  {
-    name: 'get_messages',
-    description: 'Get all messages of a conversation.',
-    inputSchema: {
-      type: 'object',
-      required: ['conversation_id'],
-      properties: {
-        conversation_id: { type: 'string', description: 'Conversation ID' },
-      },
-    },
-  },
-  {
-    name: 'pre_approve_exchange',
-    description: 'Pre-approve an exchange request.',
-    inputSchema: {
-      type: 'object',
-      required: ['conversation_id'],
-      properties: {
-        conversation_id: { type: 'string', description: 'Conversation ID' },
-      },
-    },
-  },
-  {
-    name: 'archive_conversation',
-    description: 'Archive a conversation.',
-    inputSchema: {
-      type: 'object',
-      required: ['conversation_id'],
-      properties: {
-        conversation_id: { type: 'string', description: 'Conversation ID' },
-      },
-    },
-  },
-  {
-    name: 'start_conversation',
-    description: 'Start a new conversation with a member about their home.',
-    inputSchema: {
-      type: 'object',
-      required: ['home_id', 'text'],
-      properties: {
-        home_id: { type: 'string', description: 'The home you are enquiring about' },
-        text: { type: 'string', description: 'Opening message' },
-      },
-    },
-  },
+  requiredStringTool(
+    'get_conversation',
+    'Get extended information about a conversation.',
+    { conversation_id: 'Conversation ID' }
+  ),
+  requiredStringTool(
+    'send_message',
+    'Send a message in an existing conversation.',
+    { conversation_id: 'Conversation ID', text: 'Message text to send' }
+  ),
+  requiredStringTool(
+    'get_exchange_request',
+    'Get exchange request details for a conversation.',
+    { conversation_id: 'Conversation ID' }
+  ),
+  requiredStringTool(
+    'get_messages',
+    'Get all messages of a conversation.',
+    { conversation_id: 'Conversation ID' }
+  ),
+  requiredStringTool(
+    'pre_approve_exchange',
+    'Pre-approve an exchange request.',
+    { conversation_id: 'Conversation ID' }
+  ),
+  requiredStringTool(
+    'archive_conversation',
+    'Archive a conversation.',
+    { conversation_id: 'Conversation ID' }
+  ),
+  requiredStringTool(
+    'start_conversation',
+    'Start a new conversation with a member about their home.',
+    { home_id: 'The home you are enquiring about', text: 'Opening message' }
+  ),
 ];
 
 type Args = Record<string, unknown>;

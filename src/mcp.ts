@@ -9,32 +9,28 @@ import { searchTools, handleSearch } from './tools/search';
 import { messagingTools, handleMessaging } from './tools/messaging';
 import { userTools, handleUser } from './tools/user';
 
-const ALL_TOOLS = [...searchTools, ...messagingTools, ...userTools];
+export const allTools = [...searchTools, ...messagingTools, ...userTools];
 const SEARCH_NAMES = new Set(searchTools.map((t) => t.name));
 const MESSAGING_NAMES = new Set(messagingTools.map((t) => t.name));
 const USER_NAMES = new Set(userTools.map((t) => t.name));
 
-const server = new Server(
-  { name: 'homeexchange', version: '1.0.0' },
-  { capabilities: { tools: {} } }
-);
+export function listTools() {
+  return { tools: allTools };
+}
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: ALL_TOOLS,
-}));
-
-server.setRequestHandler(CallToolRequestSchema, async (req) => {
-  const { name, arguments: args = {} } = req.params;
-
+export async function handleToolCall(
+  name: string,
+  args: Record<string, unknown> = {}
+) {
   try {
     let result: unknown;
 
     if (SEARCH_NAMES.has(name)) {
-      result = await handleSearch(name, args as Record<string, unknown>);
+      result = await handleSearch(name, args);
     } else if (MESSAGING_NAMES.has(name)) {
-      result = await handleMessaging(name, args as Record<string, unknown>);
+      result = await handleMessaging(name, args);
     } else if (USER_NAMES.has(name)) {
-      result = await handleUser(name, args as Record<string, unknown>);
+      result = await handleUser(name, args);
     } else {
       throw new Error(`Unknown tool: ${name}`);
     }
@@ -49,15 +45,36 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       isError: true,
     };
   }
-});
+}
 
-async function main() {
-  const transport = new StdioServerTransport();
+export function createServer(): Server {
+  const server = new Server(
+    { name: 'homeexchange', version: '1.0.0' },
+    { capabilities: { tools: {} } }
+  );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => listTools());
+  server.setRequestHandler(CallToolRequestSchema, async (req) => {
+    const { name, arguments: args = {} } = req.params;
+    return handleToolCall(name, args as Record<string, unknown>);
+  });
+
+  return server;
+}
+
+export async function main(
+  server: Server = createServer(),
+  transport: StdioServerTransport = new StdioServerTransport()
+) {
   await server.connect(transport);
   process.stderr.write('HomeExchange MCP server running (stdio)\n');
 }
 
-main().catch((err) => {
+export function reportFatal(err: unknown): never {
   process.stderr.write(`Fatal: ${String(err)}\n`);
   process.exit(1);
-});
+}
+
+if (process.argv[1] === __filename) {
+  main().catch(reportFatal);
+}
