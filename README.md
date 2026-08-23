@@ -72,7 +72,7 @@ Auth is captured once via your real browser session — no credentials stored in
 ### 1. Install
 
 ```bash
-npm install
+npm ci
 npx playwright install chromium
 ```
 
@@ -322,7 +322,9 @@ Achievements earned by a member.
 | `npm run record` | Full network recorder with HAR capture (API exploration) |
 | `npm run analyze` | Analyze a `.har` file → `api-map.json` |
 | `npm run build` | Compile TypeScript |
-| `npm run check` | Typecheck + lint + tests |
+| `npm run test` | Run unit tests |
+| `npm run test:coverage` | Run tests with the 80% coverage gate |
+| `npm run check` | Lint, typecheck, coverage, and build |
 
 ---
 
@@ -358,6 +360,8 @@ Tracked as GitHub Issues — upvote or comment to influence priority:
 
 Ideas, bug reports, and pull requests are welcome.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete development, quality, privacy, and organization-rule requirements.
+
 **Got a feature idea or found a bug?** [Open an issue](https://github.com/osloer-industries/homeexchange-mcp/issues/new) — describe what you were trying to do and what happened (or didn't).
 
 **Want to contribute code?**
@@ -369,6 +373,10 @@ Ideas, bug reports, and pull requests are welcome.
 **Good first issues** are tagged [`good first issue`](https://github.com/osloer-industries/homeexchange-mcp/labels/good%20first%20issue) — start there if you're new to the codebase.
 
 > Note: This project reverse-engineers a private API. New tools may break if HomeExchange changes their endpoints. Please check existing issues before reporting an API breakage.
+
+## Security
+
+Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md). Never include session files, cookies, access tokens, private messages, or member data in an issue or pull request.
 
 ---
 

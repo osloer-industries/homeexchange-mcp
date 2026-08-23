@@ -1,0 +1,33 @@
+name: Bug report
+description: Report reproducible behavior that does not work as expected.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include session files, cookies, tokens, private messages, or member data.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Include the expected and actual behavior using synthetic or redacted data.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest safe reproduction and commands used.
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      placeholder: 22.23.1
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
