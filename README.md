@@ -384,7 +384,7 @@ Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md)
 
 Release Please collects conventional commits on `main` into a release pull request. A maintainer reviews that pull request and merges it when the project is ready to publish. Merging it updates `CHANGELOG.md`, `package.json`, and `package-lock.json`, then creates the version tag and GitHub Release.
 
-Before `1.0.0`, `feat:` and breaking changes increase the minor version, while `fix:`, `perf:`, and `revert:` increase the patch version. The release workflow uses the `RELEASE_TOKEN` repository secret so its pull requests receive the normal required CI checks. That fine-grained token must have access only to this repository, permission to write contents and pull requests, and an expiration that complies with the organization policy.
+Before `1.0.0`, `feat:` and breaking changes increase the minor version, while `fix:`, `perf:`, and `revert:` increase the patch version. The release workflow consumes the organization Actions secret named `RELEASE_TOKEN` so its pull requests receive the normal required CI checks. Organization administrators must include this repository in the secret's selected-repository access policy. The underlying credential needs permission to write contents and pull requests, and an expiration that complies with organization policy.
 
 ---
 
