@@ -6,10 +6,10 @@
 
 Search homes · Read messages · Manage favourites · All from your AI client
 
-[![Version](https://img.shields.io/github/v/release/tn819/homeexchange-mcp?color=FF6B35&label=version)](https://github.com/tn819/homeexchange-mcp/releases)
+[![Version](https://img.shields.io/github/v/release/osloer-industries/homeexchange-mcp?color=FF6B35&label=version)](https://github.com/osloer-industries/homeexchange-mcp/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-FF6B35)](LICENSE)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=tn819_homeexchange-mcp&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=tn819_homeexchange-mcp)
-[![Unofficial](https://img.shields.io/badge/status-unofficial-grey)](https://github.com/tn819/homeexchange-mcp#disclaimer)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=osloer-industries_homeexchange-mcp&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=osloer-industries_homeexchange-mcp)
+[![Unofficial](https://img.shields.io/badge/status-unofficial-grey)](https://github.com/osloer-industries/homeexchange-mcp#disclaimer)
 
 > **Unofficial project.** Not affiliated with or endorsed by HomeExchange SAS.
 > Personal use only — see [disclaimer](#disclaimer).
@@ -322,7 +322,7 @@ Achievements earned by a member.
 | `npm run record` | Full network recorder with HAR capture (API exploration) |
 | `npm run analyze` | Analyze a `.har` file → `api-map.json` |
 | `npm run build` | Compile TypeScript |
-| `npm run check` | Typecheck + lint |
+| `npm run check` | Typecheck + lint + tests |
 
 ---
 
@@ -347,10 +347,10 @@ src/
 
 Tracked as GitHub Issues — upvote or comment to influence priority:
 
-- [#9 Calendar integration](https://github.com/tn819/homeexchange-mcp/issues/9) — query and update availability, surface conflicts across requests
-- [#10 Remote MCP](https://github.com/tn819/homeexchange-mcp/issues/10) — hosted endpoint, no local setup required
-- [#11 Token expiry detection](https://github.com/tn819/homeexchange-mcp/issues/11) — auto-prompt on 401 *(good first issue)*
-- [#12 Saved search alerts](https://github.com/tn819/homeexchange-mcp/issues/12) — notify when new homes match your saved searches
+- [#9 Calendar integration](https://github.com/osloer-industries/homeexchange-mcp/issues/9) — query and update availability, surface conflicts across requests
+- [#10 Remote MCP](https://github.com/osloer-industries/homeexchange-mcp/issues/10) — hosted endpoint, no local setup required
+- [#11 Token expiry detection](https://github.com/osloer-industries/homeexchange-mcp/issues/11) — auto-prompt on 401 *(good first issue)*
+- [#12 Saved search alerts](https://github.com/osloer-industries/homeexchange-mcp/issues/12) — notify when new homes match your saved searches
 
 ---
 
@@ -358,7 +358,7 @@ Tracked as GitHub Issues — upvote or comment to influence priority:
 
 Ideas, bug reports, and pull requests are welcome.
 
-**Got a feature idea or found a bug?** [Open an issue](https://github.com/tn819/homeexchange-mcp/issues/new) — describe what you were trying to do and what happened (or didn't).
+**Got a feature idea or found a bug?** [Open an issue](https://github.com/osloer-industries/homeexchange-mcp/issues/new) — describe what you were trying to do and what happened (or didn't).
 
 **Want to contribute code?**
 
@@ -366,9 +366,17 @@ Ideas, bug reports, and pull requests are welcome.
 2. Make your changes — keep commits [conventional](https://www.conventionalcommits.org/) (`fix:`, `feat:`, `chore:` etc.)
 3. Open a pull request — CI must pass before merge
 
-**Good first issues** are tagged [`good first issue`](https://github.com/tn819/homeexchange-mcp/labels/good%20first%20issue) — start there if you're new to the codebase.
+**Good first issues** are tagged [`good first issue`](https://github.com/osloer-industries/homeexchange-mcp/labels/good%20first%20issue) — start there if you're new to the codebase.
 
 > Note: This project reverse-engineers a private API. New tools may break if HomeExchange changes their endpoints. Please check existing issues before reporting an API breakage.
+
+---
+
+## Releases
+
+Release Please collects conventional commits on `main` into a release pull request. A maintainer reviews that pull request and merges it when the project is ready to publish. Merging it updates `CHANGELOG.md`, `package.json`, and `package-lock.json`, then creates the version tag and GitHub Release.
+
+Before `1.0.0`, `feat:` and breaking changes increase the minor version, while `fix:`, `perf:`, and `revert:` increase the patch version. The release workflow uses the `RELEASE_TOKEN` repository secret so its pull requests receive the normal required CI checks. That fine-grained token must have access only to this repository, permission to write contents and pull requests, and an expiration that complies with the organization policy.
 
 ---
 
@@ -381,7 +389,7 @@ This is an **unofficial, community project** with no affiliation with HomeExchan
 - Subject to [HomeExchange's Terms of Service](https://www.homeexchange.com/en/page/terms)
 - The HomeExchange API is private and undocumented — endpoints may change without notice
 
-**The intent is to build a genuinely useful tool for the HomeExchange community, and ideally to partner with HomeExchange to do this officially.** If you work at HomeExchange and are interested in collaborating on a proper integration, please [open an issue](https://github.com/tn819/homeexchange-mcp/issues) or get in touch.
+**The intent is to build a genuinely useful tool for the HomeExchange community, and ideally to partner with HomeExchange to do this officially.** If you work at HomeExchange and are interested in collaborating on a proper integration, please [open an issue](https://github.com/osloer-industries/homeexchange-mcp/issues) or get in touch.
 
 ---
 
