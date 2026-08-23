@@ -56,6 +56,22 @@ describe('api client', () => {
     });
   });
 
+  it('supports BFF PATCH requests with optional bodies and parameters', async () => {
+    await api.bffPatch('/exchange/123/pre-approve', { approved: true }, { locale: 'en' });
+    await api.bffPatch('/v1/conversations/123/archive');
+
+    const [firstUrl, firstInit] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(firstUrl.toString()).toBe('https://bff.homeexchange.com/exchange/123/pre-approve?locale=en');
+    expect(firstInit).toMatchObject({
+      method: 'PATCH',
+      body: JSON.stringify({ approved: true }),
+    });
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'PATCH',
+      body: undefined,
+    });
+  });
+
   it('supports API writes and deletes', async () => {
     await api.post('/v1/messages', { content: 'hello' });
     await api.del('/v1/messages/123');

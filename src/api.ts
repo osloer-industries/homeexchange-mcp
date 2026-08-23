@@ -89,7 +89,7 @@ export const api = {
   bffPatch<T>(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<T> {
     const url = new URL(`https://bff.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url.toString(), { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
+    return request<T>(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
   },
 
   get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
