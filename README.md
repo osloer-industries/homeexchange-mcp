@@ -368,7 +368,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete development, quality, pr
 
 1. Fork the repo and create a branch from `main`
 2. Make your changes — keep commits [conventional](https://www.conventionalcommits.org/) (`fix:`, `feat:`, `chore:` etc.)
-3. Open a pull request — CI must pass before merge
+3. Open a pull request with a conventional title, such as `feat: add calendar filtering` or `fix(api): handle expired sessions`
+4. Ensure all required checks pass before merge
 
 **Good first issues** are tagged [`good first issue`](https://github.com/osloer-industries/homeexchange-mcp/labels/good%20first%20issue) — start there if you're new to the codebase.
 
@@ -385,6 +386,8 @@ Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md)
 Release Please collects conventional commits on `main` into a release pull request. A maintainer reviews that pull request and merges it when the project is ready to publish. Merging it updates `CHANGELOG.md`, `package.json`, and `package-lock.json`, then creates the version tag and GitHub Release.
 
 Before `1.0.0`, `feat:` and breaking changes increase the minor version, while `fix:`, `perf:`, and `revert:` increase the patch version. The release workflow consumes the organization Actions secret named `RELEASE_TOKEN` so its pull requests receive the normal required CI checks. Organization administrators must include this repository in the secret's selected-repository access policy. The underlying credential needs permission to write contents and pull requests, and an expiration that complies with organization policy.
+
+Pull request titles are validated against the Conventional Commits format. Squash merges use the validated title as the commit subject so Release Please can calculate the correct version and changelog entry.
 
 ---
 
