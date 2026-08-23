@@ -14,13 +14,13 @@ export const messagingTools: Tool[] = [
           description: 'Filter conversations (default ALL)',
         },
         limit: { type: 'number', description: 'Number to return (default 20)' },
-        after:  { type: 'string', description: 'Pagination cursor (from previous response)' },
+        after: { type: 'string', description: 'Pagination cursor (from previous response)' },
       },
     },
   },
   {
     name: 'get_conversation',
-    description: 'Get all messages in a conversation thread.',
+    description: 'Get extended information about a conversation.',
     inputSchema: {
       type: 'object',
       required: ['conversation_id'],
@@ -42,6 +42,50 @@ export const messagingTools: Tool[] = [
     },
   },
   {
+    name: 'get_exchange_request',
+    description: 'Get exchange request details for a conversation.',
+    inputSchema: {
+      type: 'object',
+      required: ['conversation_id'],
+      properties: {
+        conversation_id: { type: 'string', description: 'Conversation ID' },
+      },
+    },
+  },
+  {
+    name: 'get_messages',
+    description: 'Get all messages of a conversation.',
+    inputSchema: {
+      type: 'object',
+      required: ['conversation_id'],
+      properties: {
+        conversation_id: { type: 'string', description: 'Conversation ID' },
+      },
+    },
+  },
+  {
+    name: 'pre_approve_exchange',
+    description: 'Pre-approve an exchange request.',
+    inputSchema: {
+      type: 'object',
+      required: ['conversation_id'],
+      properties: {
+        conversation_id: { type: 'string', description: 'Conversation ID' },
+      },
+    },
+  },
+  {
+    name: 'archive_conversation',
+    description: 'Archive a conversation.',
+    inputSchema: {
+      type: 'object',
+      required: ['conversation_id'],
+      properties: {
+        conversation_id: { type: 'string', description: 'Conversation ID' },
+      },
+    },
+  },
+  {
     name: 'start_conversation',
     description: 'Start a new conversation with a member about their home.',
     inputSchema: {
@@ -49,7 +93,7 @@ export const messagingTools: Tool[] = [
       required: ['home_id', 'text'],
       properties: {
         home_id: { type: 'string', description: 'The home you are enquiring about' },
-        text:    { type: 'string', description: 'Opening message' },
+        text: { type: 'string', description: 'Opening message' },
       },
     },
   },
@@ -61,20 +105,32 @@ export async function handleMessaging(name: string, args: Args): Promise<unknown
   switch (name) {
     case 'list_conversations': {
       const filter = (args['filter'] as string | undefined) ?? 'ALL';
-      const limit  = (args['limit']  as number | undefined) ?? 20;
+      const limit = (args['limit'] as number | undefined) ?? 20;
       const params: Record<string, string> = { filter, first: String(limit) };
       if (args['after'] !== undefined) params['after'] = args['after'] as string;
       return api.bff('/v3/conversations/me', params);
     }
 
     case 'get_conversation':
-      return api.bff(`/v3/conversations/${args['conversation_id'] as string}`);
+      return api.bff(`/v3/conversations/me/${args['conversation_id'] as string}`);
+
+    case 'pre_approve_exchange':
+      return api.bffPatch(`/exchange/${args['conversation_id'] as string}/pre-approve`);
+
+    case 'archive_conversation':
+      return api.bffPatch(`/v1/conversations/${args['conversation_id'] as string}/archive`);
+
+    case 'get_exchange_request':
+      return api.bff(`/exchange/v2/${args['conversation_id'] as string}`);
+
+    case 'get_messages':
+      return api.bff('/v3/messages', { conversation_id: args['conversation_id'] as string });
 
     case 'send_message':
-      return api.bffPost(
-        `/v3/conversations/${args['conversation_id'] as string}/messages`,
-        { text: args['text'] }
-      );
+      return api.bffPost('/v1/messages', {
+        content: args['text'],
+        conversation: Number(args['conversation_id']),
+      });
 
     case 'start_conversation':
       return api.bffPost('/v3/conversations', {

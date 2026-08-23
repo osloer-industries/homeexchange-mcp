@@ -34,6 +34,7 @@ function baseHeaders(): Record<string, string> {
   return {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    'Accept-Language': 'en',
     ...(session.token ? { Authorization: session.token } : {}),
     Cookie: cookieHeader(),
   };
@@ -83,6 +84,12 @@ export const api = {
     const url = new URL(`https://bff.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     return request<T>(url, { method: 'POST', body: JSON.stringify(body) });
+  },
+
+  bffPatch<T>(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<T> {
+    const url = new URL(`https://bff.homeexchange.com${endpoint}`);
+    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    return request<T>(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
   },
 
   get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {

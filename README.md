@@ -28,12 +28,13 @@ Once connected, ask your AI client things like:
 - *"What homes have I favourited?"*
 - *"Show the availability calendar for home 1950607"*
 
-**14 tools across two categories:**
+**20 tools across three categories:**
 
 | Category | Tools |
 |----------|-------|
-| 🔍 **Search & discovery** | `search_homes` · `get_home` · `get_home_calendar` · `get_recommendations` · `list_my_homes` · `list_favorites` · `add_favorite` · `remove_favorite` · `list_saved_searches` · `get_user_profile` |
-| 💬 **Messaging** | `list_conversations` · `get_conversation` · `send_message` · `start_conversation` |
+| 🔍 **Search & discovery** | `search_homes` · `get_home` · `get_home_calendar` · `get_recommendations` · `list_my_homes` · `list_favorites` · `add_favorite` · `remove_favorite` · `list_saved_searches` |
+| 💬 **Messaging** | `list_conversations` · `get_conversation` · `get_messages` · `get_exchange_request` · `send_message` · `start_conversation` · `pre_approve_exchange` · `archive_conversation` |
+| 👤 **Users** | `get_user_profile` · `get_user_ratings` · `get_user_achievements` |
 
 ---
 
@@ -50,12 +51,13 @@ Once connected, ask your AI client things like:
        │
   MCP Server (local, stdio)
        │
-  ┌────┴──────────────────────┐
-  │                           │
-  search & discovery     messaging
-  (10 tools)             (4 tools)
-       │                      │
-       └─────────┬────────────┘
+  ┌────┴──────────────────────────────┐
+  │                 │                 │
+  search &       messaging          users
+  discovery      (8 tools)        (3 tools)
+  (9 tools)          │                │
+       │             └────────┬───────┘
+       └────────────────┘
                  │
      api.homeexchange.com
      bff.homeexchange.com
@@ -220,13 +222,6 @@ Your saved search filters.
 |-----------|------|----------|---------|-------------|
 | `limit` | number | No | `100` | Number of results |
 
-#### `get_user_profile`
-A member's public profile.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `user_id` | string | **Yes** | Numeric user ID |
-
 ---
 
 ### 💬 Messaging
@@ -241,7 +236,21 @@ Your conversation inbox.
 | `after` | string | No | — | Pagination cursor from previous response |
 
 #### `get_conversation`
-All messages in a thread.
+Extended information about a conversation, including exchange details.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `conversation_id` | string | **Yes** | Conversation ID |
+
+#### `get_messages`
+All messages in a conversation thread.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `conversation_id` | string | **Yes** | Conversation ID |
+
+#### `get_exchange_request`
+Exchange request details attached to a conversation.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -262,6 +271,45 @@ Open a new conversation about a home.
 |-----------|------|----------|-------------|
 | `home_id` | string | **Yes** | The home you're enquiring about |
 | `text` | string | **Yes** | Opening message |
+
+#### `pre_approve_exchange`
+Pre-approve an exchange request.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `conversation_id` | string | **Yes** | Conversation ID |
+
+#### `archive_conversation`
+Archive a conversation.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `conversation_id` | string | **Yes** | Conversation ID |
+
+---
+
+### 👤 Users
+
+#### `get_user_profile`
+A member's public profile.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `user_id` | string | **Yes** | Numeric user ID |
+
+#### `get_user_ratings`
+Ratings left for a member.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `user_id` | string | **Yes** | Numeric user ID |
+
+#### `get_user_achievements`
+Achievements earned by a member.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `user_id` | string | **Yes** | Numeric user ID |
 
 ---
 
@@ -288,8 +336,9 @@ src/
   api.ts            authenticated HTTP client
   mcp.ts            MCP stdio server
   tools/
-    search.ts       10 search & discovery tools
-    messaging.ts    4 messaging tools
+    search.ts       9 search & discovery tools
+    messaging.ts    8 messaging tools
+    user.ts         3 user tools
 ```
 
 ---
