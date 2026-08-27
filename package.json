@@ -20,18 +20,18 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "25.4.0",
-    "@typescript-eslint/eslint-plugin": "8.66.0",
-    "@typescript-eslint/parser": "8.66.0",
-    "@vitest/coverage-v8": "4.1.10",
+    "@typescript-eslint/eslint-plugin": "8.67.0",
+    "@typescript-eslint/parser": "8.67.0",
+    "@vitest/coverage-v8": "4.1.11",
     "eslint": "10.9.0",
     "ts-node": "10.9.2",
     "typescript": "5.9.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
-    "@playwright/test": "1.58.2",
-    "playwright": "1.58.2"
+    "@playwright/test": "1.62.1",
+    "playwright": "1.62.1"
   },
   "overrides": {
     "@actions/http-client": {
