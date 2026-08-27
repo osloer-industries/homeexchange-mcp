@@ -86,6 +86,10 @@ A browser opens. Log in to HomeExchange, then press **Ctrl+C**. Your session is 
 
 > Tokens expire after a few days. Re-run `npm run login` when tools start returning 401s.
 
+### Optional location search configuration
+
+Searching homes by a place name needs a personal geocoding token to resolve that name to a HomeExchange search location. Use `.env.example` as a reference, then export `HOMEEXCHANGE_GEOCODING_TOKEN` before starting the MCP server. Keep the token out of version control.
+
 ### 3. Start the MCP server
 
 ```bash

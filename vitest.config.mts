@@ -11,6 +11,7 @@ export default defineConfig({
         'src/mcp.ts',
         'src/security.ts',
         'src/tools/messaging.ts',
+        'src/tools/search.ts',
         'src/tools/tool-schema.ts',
         'src/tools/user.ts',
       ],

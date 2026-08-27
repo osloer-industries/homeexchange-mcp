@@ -1,6 +1,11 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { api } from '../api';
 
+const SEARCH_HEADERS: Record<string, string> = {
+  'X-SEARCH-API-VERSION': 'v2',
+  'X-LEGACY-RESPONSE': 'true',
+};
+
 export const searchTools: Tool[] = [
   {
     name: 'search_homes',
@@ -11,10 +16,12 @@ export const searchTools: Tool[] = [
         location:      { type: 'string', description: 'City, region, or country name' },
         checkin:       { type: 'string', description: 'Check-in date (YYYY-MM-DD)' },
         checkout:      { type: 'string', description: 'Check-out date (YYYY-MM-DD)' },
-        guests:        { type: 'number', description: 'Number of guests' },
+        guests:        { type: 'number', description: 'Total guests, retained for compatibility' },
+        adults:        { type: 'number', description: 'Number of adults (default 2)' },
+        children:      { type: 'number', description: 'Number of children (default 0)' },
         exchange_type: { type: 'string', enum: ['GuestPoints', 'simultaneous', 'non_simultaneous'], description: 'Type of exchange' },
         home_type:     { type: 'string', enum: ['house', 'apartment', 'other'], description: 'Property type' },
-        limit:         { type: 'number', description: 'Results per page (default 20, max 36)' },
+        limit:         { type: 'number', description: 'Results per page (default 20, max 200)' },
         offset:        { type: 'number', description: 'Pagination offset (default 0)' },
       },
     },
@@ -102,22 +109,115 @@ export const searchTools: Tool[] = [
 
 type Args = Record<string, unknown>;
 
+interface GeocodingFeature {
+  bbox?: [number, number, number, number];
+  geometry: { coordinates: [number, number] };
+  properties: { id?: string; source?: string };
+}
+
+interface GeocodingResponse {
+  features?: GeocodingFeature[];
+}
+
+interface SearchHome {
+  lat?: number;
+  latitude?: number;
+  lng?: number;
+  longitude?: number;
+  location?: { lat?: number; latitude?: number; lng?: number; longitude?: number };
+  [key: string]: unknown;
+}
+
+interface SearchResponse {
+  homes?: SearchHome[];
+  results?: SearchHome[];
+  [key: string]: unknown;
+}
+
+interface GeocodedLocation {
+  bbox: { maxLat: number; maxLon: number; minLat: number; minLon: number };
+  locationId: string;
+  provider: string;
+}
+
+async function geocodeLocation(location: string): Promise<GeocodedLocation> {
+  const token = process.env['HOMEEXCHANGE_GEOCODING_TOKEN'];
+  if (!token) {
+    throw new Error(
+      'Searching by location requires HOMEEXCHANGE_GEOCODING_TOKEN. Set it to a personal geocoding API token before starting the MCP server.'
+    );
+  }
+
+  const url = new URL('https://api.jawg.io/places/v1/autocomplete');
+  url.searchParams.set('text', location);
+  url.searchParams.set('access-token', token);
+  url.searchParams.set('lang', 'en');
+  url.searchParams.set('size', '1');
+
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Could not geocode ${location}.`);
+
+  const feature = ((await response.json()) as GeocodingResponse).features?.[0];
+  if (!feature?.properties.id) throw new Error(`No location found for ${location}.`);
+
+  const [lon, lat] = feature.geometry.coordinates;
+  const [minLon, minLat, maxLon, maxLat] = feature.bbox ?? [lon - 0.25, lat - 0.25, lon + 0.25, lat + 0.25];
+  return {
+    locationId: feature.properties.id,
+    provider: feature.properties.source ?? 'openstreetmap',
+    bbox: { minLat, maxLat, minLon, maxLon },
+  };
+}
+
+function homeCoordinates(home: SearchHome): [number, number] | undefined {
+  const lat = home.lat ?? home.latitude ?? home.location?.lat ?? home.location?.latitude;
+  const lon = home.lng ?? home.longitude ?? home.location?.lng ?? home.location?.longitude;
+  return lat === undefined || lon === undefined ? undefined : [lat, lon];
+}
+
+function filterToLocation(response: SearchResponse, location: GeocodedLocation): SearchResponse {
+  const homes = response.results ?? response.homes;
+  if (!homes) return response;
+  const filtered = homes.filter((home) => {
+    const coordinates = homeCoordinates(home);
+    if (!coordinates) return false;
+    const [lat, lon] = coordinates;
+    const { minLat, maxLat, minLon, maxLon } = location.bbox;
+    return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
+  });
+  return response.results ? { ...response, results: filtered } : { ...response, homes: filtered };
+}
+
+function searchBody(args: Args, location?: GeocodedLocation): Record<string, unknown> {
+  const query: Record<string, unknown> = {
+    guests: {
+      adults: (args['adults'] as number | undefined) ?? (args['guests'] as number | undefined) ?? 2,
+      children: (args['children'] as number | undefined) ?? 0,
+    },
+  };
+  if (args['checkin'] && args['checkout']) {
+    query['dateRanges'] = [{ from: args['checkin'], to: args['checkout'] }];
+  }
+  if (location) {
+    query['locationId'] = location.locationId;
+    query['provider'] = location.provider;
+  }
+  if (args['exchange_type']) query['exchangeTypes'] = [args['exchange_type']];
+  if (args['home_type']) query['homeTypes'] = [args['home_type']];
+  return { search_query: query };
+}
+
 export async function handleSearch(name: string, args: Args): Promise<unknown> {
   switch (name) {
     case 'search_homes': {
-      const body: Record<string, unknown> = {};
-      if (args['location'])      body['location']      = args['location'];
-      if (args['checkin'])       body['dateFrom']       = args['checkin'];
-      if (args['checkout'])      body['dateTo']         = args['checkout'];
-      if (args['guests'])        body['nbGuests']       = args['guests'];
-      if (args['exchange_type']) body['exchangeTypes']  = [args['exchange_type']];
-      if (args['home_type'])     body['homeTypes']      = [args['home_type']];
-      const limit  = (args['limit']  as number | undefined) ?? 20;
-      const offset = (args['offset'] as number | undefined) ?? 0;
-      return api.bffPost('/search/homes', body, {
+      const limit = Math.min(Math.max((args['limit'] as number | undefined) ?? 20, 1), 200);
+      const offset = Math.max((args['offset'] as number | undefined) ?? 0, 0);
+      const location = args['location'] ? await geocodeLocation(args['location'] as string) : undefined;
+      const response = await api.bffPost<SearchResponse>('/search/homes', searchBody(args, location), {
         limit: String(limit),
         offset: String(offset),
-      });
+      }, SEARCH_HEADERS);
+      return location ? filterToLocation(response, location) : response;
     }
 
     case 'get_home':

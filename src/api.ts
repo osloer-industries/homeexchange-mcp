@@ -80,10 +80,15 @@ export const api = {
     return request<T>(url);
   },
 
-  bffPost<T>(endpoint: string, body: unknown, params?: Record<string, string>): Promise<T> {
+  bffPost<T>(
+    endpoint: string,
+    body: unknown,
+    params?: Record<string, string>,
+    headers?: Record<string, string>
+  ): Promise<T> {
     const url = new URL(`https://bff.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'POST', body: JSON.stringify(body) });
+    return request<T>(url, { method: 'POST', body: JSON.stringify(body), headers });
   },
 
   bffPatch<T>(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<T> {
