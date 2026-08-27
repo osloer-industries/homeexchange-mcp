@@ -7,6 +7,12 @@ updates:
       day: monday
       time: "04:00"
     open-pull-requests-limit: 5
+    groups:
+      development-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
     labels:
       - dependencies
     commit-message:
