@@ -31,7 +31,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
     "@playwright/test": "1.62.1",
-    "playwright": "1.58.2"
+    "playwright": "1.62.1"
   },
   "overrides": {
     "@actions/http-client": {
