@@ -7,7 +7,7 @@
     "record": "ts-node src/record.ts",
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "oxlint -c .oxlintrc.json --type-aware src",
     "check": "npm run typecheck && npm run lint && npm test",
     "analyze": "ts-node src/analyze.ts",
     "login": "ts-node src/login.ts",
@@ -20,14 +20,12 @@
   "license": "ISC",
   "description": "Unofficial local MCP server for HomeExchange",
   "devDependencies": {
-    "@eslint/js": "10.0.1",
-    "@types/node": "25.4.0",
-    "@typescript-eslint/eslint-plugin": "8.67.0",
-    "@typescript-eslint/parser": "8.67.0",
+    "@types/node": "22.20.1",
     "@vitest/coverage-v8": "4.1.11",
-    "eslint": "10.9.0",
+    "oxlint": "1.79.0",
+    "oxlint-tsgolint": "7.0.2001",
     "ts-node": "10.9.2",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "vitest": "4.1.11"
   },
   "dependencies": {
