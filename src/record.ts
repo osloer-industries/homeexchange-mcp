@@ -22,7 +22,8 @@ async function saveAndExit() {
   console.log(`   Headers: ${Object.keys(capturedHeaders).join(', ') || 'none'}`);
   console.log(`   User ID: ${userId}`);
   console.log('   Run: npm run analyze\n');
-  browser?.close().finally(() => process.exit(0));
+  await browser?.close();
+  process.exit(0);
 }
 
 async function record() {
@@ -75,7 +76,7 @@ async function record() {
     browser!.on('disconnected', () => resolve());
   });
 
-  saveAndExit();
+  await saveAndExit();
 }
 
 record().catch(console.error);

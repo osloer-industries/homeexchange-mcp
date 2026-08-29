@@ -207,54 +207,35 @@ function searchBody(args: Args, location?: GeocodedLocation): Record<string, unk
   return { search_query: query };
 }
 
+function numericParameter(args: Args, name: string, fallback: number): number {
+  const value = args[name];
+  return typeof value === 'number' ? value : fallback;
+}
+
+async function searchHomes(args: Args): Promise<SearchResponse> {
+  const limit = Math.min(Math.max(numericParameter(args, 'limit', 20), 1), 200);
+  const offset = Math.max(numericParameter(args, 'offset', 0), 0);
+  const location = args['location'] ? await geocodeLocation(args['location'] as string) : undefined;
+  const response = await api.bffPost<SearchResponse>('/search/homes', searchBody(args, location), {
+    limit: String(limit), offset: String(offset),
+  }, SEARCH_HEADERS);
+  return location ? filterToLocation(response, location) : response;
+}
+
+const handlers: Record<string, (args: Args) => Promise<unknown>> = {
+  search_homes: searchHomes,
+  get_home: (args) => api.bff(`/homes/${args['home_id'] as string}`),
+  get_home_calendar: (args) => api.get(`/v1/homes/${args['home_id'] as string}/calendar`),
+  get_recommendations: (args) => api.bffPost('/search/recommendation', {}, { limit: String(numericParameter(args, 'limit', 8)) }),
+  list_my_homes: () => api.bff('/v1/homes/me'),
+  list_favorites: (args) => api.get('/v2/favorites/me', { 'filters[status]': '1', 'order_by[createdAt]': 'DESC', limit: String(numericParameter(args, 'limit', 20)) }),
+  add_favorite: (args) => api.post('/v2/favorites', { homeId: args['home_id'] }),
+  remove_favorite: (args) => api.del(`/v2/favorites/${args['home_id'] as string}`),
+  list_saved_searches: (args) => api.bff('/search/saved-searches', { limit: String(numericParameter(args, 'limit', 100)) }),
+};
+
 export async function handleSearch(name: string, args: Args): Promise<unknown> {
-  switch (name) {
-    case 'search_homes': {
-      const limit = Math.min(Math.max((args['limit'] as number | undefined) ?? 20, 1), 200);
-      const offset = Math.max((args['offset'] as number | undefined) ?? 0, 0);
-      const location = args['location'] ? await geocodeLocation(args['location'] as string) : undefined;
-      const response = await api.bffPost<SearchResponse>('/search/homes', searchBody(args, location), {
-        limit: String(limit),
-        offset: String(offset),
-      }, SEARCH_HEADERS);
-      return location ? filterToLocation(response, location) : response;
-    }
-
-    case 'get_home':
-      return api.bff(`/homes/${args['home_id'] as string}`);
-
-    case 'get_home_calendar':
-      return api.get(`/v1/homes/${args['home_id'] as string}/calendar`);
-
-    case 'get_recommendations': {
-      const limit = (args['limit'] as number | undefined) ?? 8;
-      return api.bffPost('/search/recommendation', {}, { limit: String(limit) });
-    }
-
-    case 'list_my_homes':
-      return api.bff('/v1/homes/me');
-
-    case 'list_favorites': {
-      const limit = (args['limit'] as number | undefined) ?? 20;
-      return api.get('/v2/favorites/me', {
-        'filters[status]': '1',
-        'order_by[createdAt]': 'DESC',
-        limit: String(limit),
-      });
-    }
-
-    case 'add_favorite':
-      return api.post('/v2/favorites', { homeId: args['home_id'] });
-
-    case 'remove_favorite':
-      return api.del(`/v2/favorites/${args['home_id'] as string}`);
-
-    case 'list_saved_searches': {
-      const limit = (args['limit'] as number | undefined) ?? 100;
-      return api.bff('/search/saved-searches', { limit: String(limit) });
-    }
-
-    default:
-      throw new Error(`Unknown search tool: ${name}`);
-  }
+  const handler = handlers[name];
+  if (!handler) throw new Error(`Unknown search tool: ${name}`);
+  return handler(args);
 }

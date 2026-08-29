@@ -52,6 +52,20 @@ describe('search tools', () => {
     );
   });
 
+  it('reports failed and empty geocoding results without sending a search request', async () => {
+    process.env['HOMEEXCHANGE_GEOCODING_TOKEN'] = 'test-token';
+    fetchMock.mockResolvedValueOnce({ ok: false });
+    await expect(handleSearch('search_homes', { location: 'Brussels' })).rejects.toThrow(
+      'Could not geocode Brussels.'
+    );
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) });
+    await expect(handleSearch('search_homes', { location: 'Brussels' })).rejects.toThrow(
+      'No location found for Brussels.'
+    );
+    expect(apiMock.bffPost).not.toHaveBeenCalled();
+  });
+
   it('geocodes a location and filters a BFF response to its bounding box', async () => {
     process.env['HOMEEXCHANGE_GEOCODING_TOKEN'] = 'test-token';
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ features: [{
