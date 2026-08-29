@@ -28,3 +28,11 @@ and wait for the user to confirm it.
 Read-only tools may be used for validation, but return only the minimum
 necessary summary. Redact names, addresses, message contents, booking dates,
 and identifiers unless the user specifically needs them.
+
+### Local MCP validation
+
+Use `npm run test:mcp` to verify the built server through its real local stdio
+MCP connection. This is credential-free and must not make network requests.
+Use `npm run test:mcp -- --live` only when a current local `session.json` is
+available and a read-only account check is intended. It must never print API
+responses or session data. See the local-testing section in `README.md`.

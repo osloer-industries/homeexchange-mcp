@@ -17,12 +17,15 @@ function loadSession(): Session {
   return JSON.parse(fs.readFileSync(SESSION_PATH, 'utf8')) as Session;
 }
 
-const session = loadSession();
+let cachedSession: Session | undefined;
 
-export const userId = session.userId;
+function session(): Session {
+  cachedSession ??= loadSession();
+  return cachedSession;
+}
 
 function cookieHeader(): string {
-  return session.cookies
+  return session().cookies
     .filter((c) => {
       return isHomeExchangeHostname(c.domain);
     })
@@ -31,11 +34,12 @@ function cookieHeader(): string {
 }
 
 function baseHeaders(): Record<string, string> {
+  const currentSession = session();
   return {
     'Content-Type': 'application/json',
     Accept: 'application/json',
     'Accept-Language': 'en',
-    ...(session.token ? { Authorization: session.token } : {}),
+    ...(currentSession.token ? { Authorization: currentSession.token } : {}),
     Cookie: cookieHeader(),
   };
 }
@@ -80,10 +84,15 @@ export const api = {
     return request<T>(url);
   },
 
-  bffPost<T>(endpoint: string, body: unknown, params?: Record<string, string>): Promise<T> {
+  bffPost<T>(
+    endpoint: string,
+    body: unknown,
+    params?: Record<string, string>,
+    headers?: Record<string, string>
+  ): Promise<T> {
     const url = new URL(`https://bff.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'POST', body: JSON.stringify(body) });
+    return request<T>(url, { method: 'POST', body: JSON.stringify(body), headers });
   },
 
   bffPatch<T>(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<T> {
