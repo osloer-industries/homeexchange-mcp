@@ -86,11 +86,42 @@ A browser opens. Log in to HomeExchange, then press **Ctrl+C**. Your session is 
 
 > Tokens expire after a few days. Re-run `npm run login` when tools start returning 401s.
 
+### Optional location search configuration
+
+Searching homes by a place name needs a personal geocoding token to resolve that name to a HomeExchange search location. Use `.env.example` as a reference, then export `HOMEEXCHANGE_GEOCODING_TOKEN` before starting the MCP server. Keep the token out of version control.
+
 ### 3. Start the MCP server
 
 ```bash
 npm run mcp
 ```
+
+## Local MCP testing
+
+The project includes a local end-to-end smoke test. It builds the server,
+starts it over stdio, performs the MCP handshake, and confirms that all tools
+are available. It does not need a HomeExchange session and makes no network
+requests.
+
+```bash
+npm run test:mcp
+```
+
+To run the built server in the same form used by the smoke test:
+
+```bash
+npm run mcp:local
+```
+
+After completing `npm run login`, you can also validate one read-only
+HomeExchange call without displaying any account data:
+
+```bash
+npm run test:mcp -- --live
+```
+
+The live check calls `list_my_homes`. Do not use it for testing changes that
+write data, and never commit `session.json` or `.env`.
 
 ---
 

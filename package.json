@@ -11,7 +11,9 @@
     "check": "npm run typecheck && npm run lint && npm test",
     "analyze": "ts-node src/analyze.ts",
     "login": "ts-node src/login.ts",
-    "mcp": "ts-node src/mcp.ts"
+    "mcp": "ts-node src/mcp.ts",
+    "mcp:local": "npm run build && node dist/mcp.js",
+    "test:mcp": "npm run build && node scripts/test-mcp.mjs"
   },
   "keywords": [],
   "author": "",
