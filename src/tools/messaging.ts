@@ -1,8 +1,12 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { api } from '../api';
 import { type Args } from './args';
 import { requiredStringTool } from './tool-schema';
+import { zodTool } from './zod-tool';
+
+const conversationIdArgs = z.object({ conversation_id: z.string().min(1) });
+const sendMessageArgs = conversationIdArgs.extend({ text: z.string().min(1) });
 
 export const messagingTools: Tool[] = [
   {
@@ -21,10 +25,10 @@ export const messagingTools: Tool[] = [
       },
     },
   },
-  requiredStringTool(
+  zodTool(
     'get_conversation',
     'Get extended information about a conversation.',
-    { conversation_id: 'Conversation ID' }
+    conversationIdArgs
   ),
   requiredStringTool(
     'send_message',
@@ -58,13 +62,11 @@ export const messagingTools: Tool[] = [
   ),
 ];
 
-const conversationIdArgs = z.object({ conversation_id: z.string().min(1) });
 const listConversationsArgs = z.object({
   after: z.string().min(1).optional(),
   filter: z.enum(['ALL', 'UNANSWERED', 'ARCHIVED']).default('ALL'),
   limit: z.number().int().positive().default(20),
 });
-const sendMessageArgs = conversationIdArgs.extend({ text: z.string().min(1) });
 const startConversationArgs = z.object({ home_id: z.string().min(1), text: z.string().min(1) });
 
 export async function handleMessaging(name: string, args: Args): Promise<unknown> {
