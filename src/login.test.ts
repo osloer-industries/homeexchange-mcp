@@ -63,4 +63,41 @@ describe('login', () => {
       fs.rmSync(directory, { force: true, recursive: true });
     }
   });
+
+  it('safely saves when cookie refresh fails and the browser is already closed', async () => {
+    let requestListener: ((request: { headers: () => Record<string, string>; url: () => string }) => void) | undefined;
+    const page = {
+      goto: async (): Promise<void> => {
+        requestListener?.({
+          headers: () => ({}),
+          url: () => 'https://www.homeexchange.com/members/456',
+        });
+      },
+      on: (_event: 'request', listener: typeof requestListener): void => { requestListener = listener; },
+    };
+    const context = {
+      cookies: async (): Promise<never> => Promise.reject(new Error('browser closed')),
+      newPage: async (): Promise<typeof page> => page,
+    };
+    const browser = {
+      close: async (): Promise<void> => undefined,
+      isConnected: (): boolean => false,
+      newContext: async (): Promise<typeof context> => context,
+      on: (): void => undefined,
+    };
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-login-'));
+    const sessionPath = path.join(directory, 'session.json');
+
+    try {
+      await login({
+        launchBrowser: async () => browser,
+        log: () => undefined,
+        sessionPath,
+        waitForSave: async (save) => { await Promise.resolve(); await save(); await save(); },
+      });
+      expect(JSON.parse(fs.readFileSync(sessionPath, 'utf8'))).toEqual({ token: null, cookies: [], userId: '456' });
+    } finally {
+      fs.rmSync(directory, { force: true, recursive: true });
+    }
+  });
 });

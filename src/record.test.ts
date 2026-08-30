@@ -75,4 +75,43 @@ describe('record', () => {
       fs.rmSync(directory, { force: true, recursive: true });
     }
   });
+
+  it('ignores non-API traffic and does not close an already disconnected browser', async () => {
+    let requestListener: ((request: { headers: () => Record<string, string>; method: () => string; url: () => string }) => void) | undefined;
+    let responseListener: ((response: { request: () => { url: () => string }; status: () => number }) => void) | undefined;
+    const page = {
+      goto: async (): Promise<void> => {
+        requestListener?.({ headers: () => ({}), method: () => 'GET', url: () => 'https://example.com/ignore' });
+        responseListener?.({ request: () => ({ url: () => 'https://example.com/ignore' }), status: () => 200 });
+      },
+      on: (event: 'request' | 'response', listener: typeof requestListener | typeof responseListener): void => {
+        if (event === 'request') requestListener = listener as typeof requestListener;
+        else responseListener = listener as typeof responseListener;
+      },
+    };
+    const context = {
+      cookies: async (): Promise<unknown[]> => [],
+      newPage: async (): Promise<typeof page> => page,
+    };
+    const browser = {
+      close: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+      isConnected: (): boolean => false,
+      newContext: async (): Promise<typeof context> => context,
+      on: (): void => undefined,
+    };
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-record-'));
+    const sessionPath = path.join(directory, 'session.json');
+
+    try {
+      await record({
+        launchBrowser: async () => browser,
+        sessionPath,
+        waitForCompletion: async () => undefined,
+      });
+      expect(JSON.parse(fs.readFileSync(sessionPath, 'utf8'))).toEqual({ cookies: [], headers: {}, userId: null });
+      expect(browser.close).not.toHaveBeenCalled();
+    } finally {
+      fs.rmSync(directory, { force: true, recursive: true });
+    }
+  });
 });
