@@ -14,6 +14,12 @@ const SEARCH_NAMES = new Set(searchTools.map((t) => t.name));
 const MESSAGING_NAMES = new Set(messagingTools.map((t) => t.name));
 const USER_NAMES = new Set(userTools.map((t) => t.name));
 
+interface ToolCallResult {
+  [key: string]: unknown;
+  content: { text: string; type: 'text' }[];
+  isError?: true;
+}
+
 function isArgs(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -25,7 +31,7 @@ export function listTools() {
 export async function handleToolCall(
   name: string,
   args: Record<string, unknown> = {}
-) {
+): Promise<ToolCallResult> {
   try {
     let result: unknown;
 
@@ -40,12 +46,12 @@ export async function handleToolCall(
     }
 
     return {
-      content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return {
-      content: [{ type: 'text' as const, text: `Error: ${message}` }],
+      content: [{ type: 'text', text: `Error: ${message}` }],
       isError: true,
     };
   }
