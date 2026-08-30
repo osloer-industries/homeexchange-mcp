@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  type CallToolResult,
 } from '@modelcontextprotocol/sdk/types.js';
 
 import { searchTools, handleSearch } from './tools/search';
@@ -13,12 +14,6 @@ export const allTools = [...searchTools, ...messagingTools, ...userTools];
 const SEARCH_NAMES = new Set(searchTools.map((t) => t.name));
 const MESSAGING_NAMES = new Set(messagingTools.map((t) => t.name));
 const USER_NAMES = new Set(userTools.map((t) => t.name));
-
-interface ToolCallResult {
-  [key: string]: unknown;
-  content: { text: string; type: 'text' }[];
-  isError?: true;
-}
 
 function isArgs(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -31,7 +26,7 @@ export function listTools() {
 export async function handleToolCall(
   name: string,
   args: Record<string, unknown> = {}
-): Promise<ToolCallResult> {
+): Promise<CallToolResult> {
   try {
     let result: unknown;
 
