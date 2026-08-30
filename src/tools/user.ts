@@ -1,5 +1,6 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { api } from '../api';
+import { requiredString, type Args } from './args';
 import { requiredStringTool } from './tool-schema';
 
 export const userTools: Tool[] = [
@@ -20,18 +21,16 @@ export const userTools: Tool[] = [
   ),
 ];
 
-type Args = Record<string, unknown>;
-
 export async function handleUser(name: string, args: Args): Promise<unknown> {
   switch (name) {
     case 'get_user_profile':
-      return api.get(`/v1/users/${args['user_id'] as string}`);
+      return api.get(`/v1/users/${requiredString(args, 'user_id')}`);
 
     case 'get_user_achievements':
-      return api.get(`/v1/achievement/${args['user_id'] as string}`);
+      return api.get(`/v1/achievement/${requiredString(args, 'user_id')}`);
 
     case 'get_user_ratings':
-      return api.get(`/v1/ratings/${args['user_id'] as string}`);
+      return api.get(`/v1/ratings/${requiredString(args, 'user_id')}`);
 
     default:
       throw new Error(`Unknown user tool: ${name}`);

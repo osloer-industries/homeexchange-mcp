@@ -1,5 +1,6 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { api } from '../api';
+import { optionalNumber, optionalString, requiredString, type Args } from './args';
 import { requiredStringTool } from './tool-schema';
 
 export const messagingTools: Tool[] = [
@@ -56,32 +57,31 @@ export const messagingTools: Tool[] = [
   ),
 ];
 
-type Args = Record<string, unknown>;
-
 export async function handleMessaging(name: string, args: Args): Promise<unknown> {
   switch (name) {
     case 'list_conversations': {
-      const filter = (args['filter'] as string | undefined) ?? 'ALL';
-      const limit = (args['limit'] as number | undefined) ?? 20;
+      const filter = optionalString(args, 'filter') ?? 'ALL';
+      const limit = optionalNumber(args, 'limit') ?? 20;
       const params: Record<string, string> = { filter, first: String(limit) };
-      if (args['after'] !== undefined) params['after'] = args['after'] as string;
+      const after = optionalString(args, 'after');
+      if (after) params['after'] = after;
       return api.bff('/v3/conversations/me', params);
     }
 
     case 'get_conversation':
-      return api.bff(`/v3/conversations/me/${args['conversation_id'] as string}`);
+      return api.bff(`/v3/conversations/me/${requiredString(args, 'conversation_id')}`);
 
     case 'pre_approve_exchange':
-      return api.bffPatch(`/exchange/${args['conversation_id'] as string}/pre-approve`);
+      return api.bffPatch(`/exchange/${requiredString(args, 'conversation_id')}/pre-approve`);
 
     case 'archive_conversation':
-      return api.bffPatch(`/v1/conversations/${args['conversation_id'] as string}/archive`);
+      return api.bffPatch(`/v1/conversations/${requiredString(args, 'conversation_id')}/archive`);
 
     case 'get_exchange_request':
-      return api.bff(`/exchange/v2/${args['conversation_id'] as string}`);
+      return api.bff(`/exchange/v2/${requiredString(args, 'conversation_id')}`);
 
     case 'get_messages':
-      return api.bff('/v3/messages', { conversation_id: args['conversation_id'] as string });
+      return api.bff('/v3/messages', { conversation_id: requiredString(args, 'conversation_id') });
 
     case 'send_message':
       return api.bffPost('/v1/messages', {

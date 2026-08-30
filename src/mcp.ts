@@ -14,6 +14,10 @@ const SEARCH_NAMES = new Set(searchTools.map((t) => t.name));
 const MESSAGING_NAMES = new Set(messagingTools.map((t) => t.name));
 const USER_NAMES = new Set(userTools.map((t) => t.name));
 
+function isArgs(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export function listTools() {
   return { tools: allTools };
 }
@@ -56,7 +60,7 @@ export function createServer(): Server {
   server.setRequestHandler(ListToolsRequestSchema, async () => listTools());
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args = {} } = req.params;
-    return handleToolCall(name, args as Record<string, unknown>);
+    return handleToolCall(name, isArgs(args) ? args : {});
   });
 
   return server;
