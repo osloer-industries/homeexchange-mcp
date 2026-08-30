@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { z } from 'zod/v3';
 import { isHomeExchangeApiUrl, isHomeExchangeHostname } from './security';
+import { type HomeExchangeClient } from './application/ports/homeexchange-client';
+import { HOMEEXCHANGE_API_ORIGINS } from './domain/homeexchange-origins';
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
 
@@ -71,9 +73,9 @@ async function request(url: URL, init: RequestInit = {}): Promise<unknown> {
   return text ? JSON.parse(text) : {};
 }
 
-export const api = {
+export const api: HomeExchangeClient = {
   bff(endpoint: string, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`https://bff.homeexchange.com${endpoint}`);
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.bff}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     return request(url);
   },
@@ -84,31 +86,31 @@ export const api = {
     params?: Record<string, string>,
     headers?: Record<string, string>
   ): Promise<unknown> {
-    const url = new URL(`https://bff.homeexchange.com${endpoint}`);
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.bff}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     return request(url, { method: 'POST', body: JSON.stringify(body), headers });
   },
 
   bffPatch(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`https://bff.homeexchange.com${endpoint}`);
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.bff}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     return request(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
   },
 
   get(endpoint: string, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`https://api.homeexchange.com${endpoint}`);
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.api}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     return request(url);
   },
 
   post(endpoint: string, body: unknown, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`https://api.homeexchange.com${endpoint}`);
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.api}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     return request(url, { method: 'POST', body: JSON.stringify(body) });
   },
 
   del(endpoint: string, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`https://api.homeexchange.com${endpoint}`);
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.api}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     return request(url, { method: 'DELETE' });
   },
