@@ -23,6 +23,12 @@ interface PageLike {
   on(event: 'response', listener: (response: ResponseLike) => void): void;
 }
 
+export interface RecorderPage {
+  goto(url: string): Promise<unknown>;
+  onRequest(listener: (request: RequestLike) => void): void;
+  onResponse(listener: (response: ResponseLike) => void): void;
+}
+
 interface ContextLike {
   cookies(): Promise<unknown[]>;
   newPage(): Promise<PageLike>;
@@ -36,10 +42,19 @@ interface BrowserLike {
 }
 
 export interface RecordOptions {
+  createPage?: (context: ContextLike) => Promise<RecorderPage>;
   launchBrowser?: () => Promise<BrowserLike>;
   log?: (message: string) => void;
   sessionPath?: string;
   waitForCompletion?: (complete: () => void) => Promise<void>;
+}
+
+export function createRecorderPage(context: ContextLike): Promise<RecorderPage> {
+  return context.newPage().then((page) => ({
+    goto: (url) => page.goto(url),
+    onRequest: (listener) => page.on('request', listener),
+    onResponse: (listener) => page.on('response', listener),
+  }));
 }
 
 export function getRequestSummary(request: RequestLike): string | null {
@@ -55,6 +70,7 @@ export function getResponseSummary(response: ResponseLike): string | null {
 }
 
 export async function record({
+  createPage = createRecorderPage,
   launchBrowser = () => chromium.launch({ headless: false }),
   log = console.log,
   sessionPath = defaultSessionPath,
@@ -62,7 +78,7 @@ export async function record({
 }: RecordOptions = {}): Promise<void> {
   const browser = await launchBrowser();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const page = await context.newPage();
+  const page = await createPage(context);
   const capturedHeaders: Record<string, string> = {};
   let userId: string | null = null;
   let saving = false;
@@ -77,7 +93,7 @@ export async function record({
     if (browser.isConnected()) await browser.close();
   };
 
-  page.on('request', (request) => {
+  page.onRequest((request) => {
     const summary = getRequestSummary(request);
     if (!summary) return;
     const url = new URL(request.url());
@@ -90,7 +106,7 @@ export async function record({
     log(`Request recorded: ${summary}`);
   });
 
-  page.on('response', (response) => {
+  page.onResponse((response) => {
     const summary = getResponseSummary(response);
     if (summary) log(`Response recorded: ${summary}`);
   });

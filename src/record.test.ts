@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
-import { getRequestSummary, getResponseSummary, record } from './record';
+import { createRecorderPage, getRequestSummary, getResponseSummary, record } from './record';
 
 describe('record summaries', () => {
   it('keeps API paths but drops query strings and non-API hosts', () => {
@@ -15,6 +15,20 @@ describe('record summaries', () => {
     expect(getResponseSummary({
       request: () => ({ url: () => 'https://bff.homeexchange.com/api/me?token=secret' }), status: () => 200,
     })).toBe('200 /api/me');
+  });
+
+  it('adapts browser events to explicit recording callbacks', async () => {
+    class RawPage {
+      async goto(): Promise<void> {}
+      on(_event: 'request', _listener: (request: { headers: () => Record<string, string>; method: () => string; url: () => string }) => void): void;
+      on(_event: 'response', _listener: (response: { request: () => { url: () => string }; status: () => number }) => void): void;
+      on(_event: string, _listener: unknown): void {}
+    }
+    const page = await createRecorderPage({ cookies: async () => [], newPage: async () => new RawPage() });
+    await page.goto('https://www.homeexchange.com');
+    page.onRequest(() => undefined);
+    page.onResponse(() => undefined);
+    expect(page).toBeDefined();
   });
 });
 
@@ -36,14 +50,12 @@ describe('record', () => {
           status: () => 201,
         });
       }),
-      on: (event: 'request' | 'response', listener: typeof requestListener | typeof responseListener) => {
-        if (event === 'request') requestListener = listener as typeof requestListener;
-        else responseListener = listener as typeof responseListener;
-      },
+      onRequest: (listener: NonNullable<typeof requestListener>): void => { requestListener = listener; },
+      onResponse: (listener: NonNullable<typeof responseListener>): void => { responseListener = listener; },
     };
     const context = {
       cookies: vi.fn<() => Promise<{ name: string }[]>>().mockResolvedValue([{ name: 'session' }]),
-      newPage: vi.fn<() => Promise<typeof page>>().mockResolvedValue(page),
+      newPage: async (): Promise<never> => { throw new Error('createPage is injected'); },
     };
     const browser = {
       close,
@@ -58,6 +70,7 @@ describe('record', () => {
     try {
       await record({
         launchBrowser: async () => browser,
+        createPage: async () => page,
         log,
         sessionPath,
         waitForCompletion: async () => { disconnected?.(); },
@@ -84,14 +97,12 @@ describe('record', () => {
         requestListener?.({ headers: () => ({}), method: () => 'GET', url: () => 'https://example.com/ignore' });
         responseListener?.({ request: () => ({ url: () => 'https://example.com/ignore' }), status: () => 200 });
       },
-      on: (event: 'request' | 'response', listener: typeof requestListener | typeof responseListener): void => {
-        if (event === 'request') requestListener = listener as typeof requestListener;
-        else responseListener = listener as typeof responseListener;
-      },
+      onRequest: (listener: NonNullable<typeof requestListener>): void => { requestListener = listener; },
+      onResponse: (listener: NonNullable<typeof responseListener>): void => { responseListener = listener; },
     };
     const context = {
       cookies: async (): Promise<unknown[]> => [],
-      newPage: async (): Promise<typeof page> => page,
+      newPage: async (): Promise<never> => { throw new Error('createPage is injected'); },
     };
     const browser = {
       close: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
@@ -105,6 +116,7 @@ describe('record', () => {
     try {
       await record({
         launchBrowser: async () => browser,
+        createPage: async () => page,
         sessionPath,
         waitForCompletion: async () => undefined,
       });
