@@ -50,7 +50,7 @@ export function createApiMap(entries: HarEntry[]): ApiMap {
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([endpoint, statuses]) => ({
         endpoint,
-        statuses: [...statuses].sort(),
+        statuses: [...statuses].sort((left, right) => left.localeCompare(right)),
       })),
   };
 }
