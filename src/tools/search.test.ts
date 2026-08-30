@@ -24,9 +24,24 @@ describe('search tools', () => {
     delete process.env['HOMEEXCHANGE_GEOCODING_TOKEN'];
   });
 
+  it('rejects a missing required home ID before calling the API', async () => {
+    await expect(handleSearch('get_home', {})).rejects.toThrow('Required');
+    expect(apiMock.bff).not.toHaveBeenCalled();
+  });
+
   it('keeps the legacy guest count while supporting adults and children', () => {
     expect(searchTools.find((tool) => tool.name === 'search_homes')?.inputSchema.properties)
       .toMatchObject({ guests: expect.any(Object), adults: expect.any(Object), children: expect.any(Object) });
+  });
+
+  it('does not send an incomplete date range', async () => {
+    await handleSearch('search_homes', { checkin: '2026-08-01' });
+    expect(apiMock.bffPost).toHaveBeenCalledWith(
+      '/search/homes',
+      expect.not.objectContaining({ search_query: expect.objectContaining({ dateRanges: expect.anything() }) }),
+      expect.anything(),
+      expect.anything()
+    );
   });
 
   it('uses the current BFF request shape and required headers', async () => {

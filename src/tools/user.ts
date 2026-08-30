@@ -1,8 +1,9 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod/v3';
 import { api } from '../api';
-import { type Args } from './args';
 import { zodTool } from './zod-tool';
+
+type Args = Record<string, unknown>;
 
 const userIdArgs = z.object({ user_id: z.string().min(1) });
 

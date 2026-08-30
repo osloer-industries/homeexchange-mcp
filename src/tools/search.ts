@@ -1,6 +1,14 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod/v3';
 import { api } from '../api';
-import { optionalNumber, optionalString, requiredString, type Args } from './args';
+
+const searchArgsSchema = z.object({
+  adults: z.number().optional(), children: z.number().optional(), guests: z.number().optional(),
+  checkin: z.string().optional(), checkout: z.string().optional(), exchange_type: z.string().optional(),
+  home_id: z.string().optional(), home_type: z.string().optional(), limit: z.number().optional(),
+  location: z.string().optional(), offset: z.number().optional(),
+}).passthrough();
+type Args = z.infer<typeof searchArgsSchema>;
 
 const SEARCH_HEADERS: Record<string, string> = {
   'X-SEARCH-API-VERSION': 'v2',
@@ -200,30 +208,30 @@ function filterToLocation(response: SearchResponse, location: GeocodedLocation):
 function searchBody(args: Args, location?: GeocodedLocation): Record<string, unknown> {
   const query: Record<string, unknown> = {
     guests: {
-      adults: optionalNumber(args, 'adults') ?? optionalNumber(args, 'guests') ?? 2,
-      children: optionalNumber(args, 'children') ?? 0,
+      adults: args.adults ?? args.guests ?? 2,
+      children: args.children ?? 0,
     },
   };
-  if (args['checkin'] && args['checkout']) {
-    query['dateRanges'] = [{ from: args['checkin'], to: args['checkout'] }];
+  if (args.checkin && args.checkout) {
+    query['dateRanges'] = [{ from: args.checkin, to: args.checkout }];
   }
   if (location) {
     query['locationId'] = location.locationId;
     query['provider'] = location.provider;
   }
-  if (args['exchange_type']) query['exchangeTypes'] = [args['exchange_type']];
-  if (args['home_type']) query['homeTypes'] = [args['home_type']];
+  if (args.exchange_type) query['exchangeTypes'] = [args.exchange_type];
+  if (args.home_type) query['homeTypes'] = [args.home_type];
   return { search_query: query };
 }
 
-function numericParameter(args: Args, name: string, fallback: number): number {
-  return optionalNumber(args, name) ?? fallback;
+function numericParameter(args: Args, name: 'limit' | 'offset', fallback: number): number {
+  return args[name] ?? fallback;
 }
 
 async function searchHomes(args: Args): Promise<SearchResponse> {
   const limit = Math.min(Math.max(numericParameter(args, 'limit', 20), 1), 200);
   const offset = Math.max(numericParameter(args, 'offset', 0), 0);
-  const locationName = optionalString(args, 'location');
+  const locationName = args.location;
   const location = locationName ? await geocodeLocation(locationName) : undefined;
   const response = await api.bffPost('/search/homes', searchBody(args, location), {
     limit: String(limit), offset: String(offset),
@@ -234,18 +242,18 @@ async function searchHomes(args: Args): Promise<SearchResponse> {
 
 const handlers: Record<string, (args: Args) => Promise<unknown>> = {
   search_homes: searchHomes,
-  get_home: (args) => api.bff(`/homes/${requiredString(args, 'home_id')}`),
-  get_home_calendar: (args) => api.get(`/v1/homes/${requiredString(args, 'home_id')}/calendar`),
+  get_home: (args) => api.bff(`/homes/${z.string().min(1).parse(args.home_id)}`),
+  get_home_calendar: (args) => api.get(`/v1/homes/${z.string().min(1).parse(args.home_id)}/calendar`),
   get_recommendations: (args) => api.bffPost('/search/recommendation', {}, { limit: String(numericParameter(args, 'limit', 8)) }),
   list_my_homes: () => api.bff('/v1/homes/me'),
   list_favorites: (args) => api.get('/v2/favorites/me', { 'filters[status]': '1', 'order_by[createdAt]': 'DESC', limit: String(numericParameter(args, 'limit', 20)) }),
   add_favorite: (args) => api.post('/v2/favorites', { homeId: args['home_id'] }),
-  remove_favorite: (args) => api.del(`/v2/favorites/${requiredString(args, 'home_id')}`),
+  remove_favorite: (args) => api.del(`/v2/favorites/${z.string().min(1).parse(args.home_id)}`),
   list_saved_searches: (args) => api.bff('/search/saved-searches', { limit: String(numericParameter(args, 'limit', 100)) }),
 };
 
 export async function handleSearch(name: string, args: Args): Promise<unknown> {
   const handler = handlers[name];
   if (!handler) throw new Error(`Unknown search tool: ${name}`);
-  return handler(args);
+  return handler(searchArgsSchema.parse(args));
 }
