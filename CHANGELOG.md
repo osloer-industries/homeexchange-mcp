@@ -2,6 +2,17 @@
 
 All notable changes to homeexchange-mcp are documented here.
 
+## [0.1.1](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.0...v0.1.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* **search:** align BFF request format safely ([#64](https://github.com/osloer-industries/homeexchange-mcp/issues/64)) ([9aa906c](https://github.com/osloer-industries/homeexchange-mcp/commit/9aa906ce4bfeb45f7487664444e8b275b9b0af78))
+
+Thanks to [@joelgombin](https://github.com/joelgombin) for the community
+investigation of the search API request format and geo-filtering that informed
+this safe implementation.
+
 ## [0.1.0](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.0.1...v0.1.0) (2026-08-24)
 
 
