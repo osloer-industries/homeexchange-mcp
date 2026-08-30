@@ -74,9 +74,9 @@ export function createServer(): Server {
 
 export async function main(
   server: Server = createServer(),
-  transport: StdioServerTransport = new StdioServerTransport()
+  connect: (target: StdioServerTransport) => Promise<void> = (target) => server.connect(target)
 ) {
-  await server.connect(transport);
+  await connect(new StdioServerTransport());
   process.stderr.write('HomeExchange MCP server running (stdio)\n');
 }
 
