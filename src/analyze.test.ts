@@ -32,6 +32,12 @@ describe('createApiMap', () => {
     expect(JSON.stringify(map)).not.toContain('secret');
     expect(JSON.stringify(map)).not.toContain('private@example.com');
   });
+
+  it('reports an empty, unauthenticated capture without retaining non-API requests', () => {
+    expect(createApiMap([
+      entry('GET', 'https://www.homeexchange.com/profile/1', 200),
+    ])).toEqual({ authenticatedRequestsFound: false, endpoints: [] });
+  });
 });
 
 describe('analyze', () => {
@@ -58,5 +64,23 @@ describe('analyze', () => {
 
   it('rejects a missing HAR file', () => {
     expect(() => analyze('/tmp/missing.har')).toThrow('No HAR file found');
+  });
+
+  it('reports an unauthenticated capture without disclosing its contents', () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-analyze-'));
+    const input = path.join(directory, 'input.har');
+    const output = path.join(directory, 'api-map.json');
+    const messages: string[] = [];
+
+    try {
+      fs.writeFileSync(input, JSON.stringify({
+        log: { entries: [entry('GET', 'https://www.homeexchange.com/profile/1', 200)] },
+      }));
+      analyze(input, output, (message) => messages.push(message));
+      expect(messages).toContain('No authenticated API requests found. Did you log in?');
+      expect(fs.readFileSync(output, 'utf8')).not.toContain('/profile/1');
+    } finally {
+      fs.rmSync(directory, { force: true, recursive: true });
+    }
   });
 });
