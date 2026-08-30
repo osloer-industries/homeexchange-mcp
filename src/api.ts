@@ -1,31 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { z } from 'zod/v3';
 import { isHomeExchangeApiUrl, isHomeExchangeHostname } from './security';
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
 
-interface Session {
-  token: string | null;
-  cookies: { name: string; value: string; domain: string }[];
-  userId: string | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function isSession(value: unknown): value is Session {
-  if (!isRecord(value) || (value.token !== null && typeof value.token !== 'string') || (value.userId !== null && typeof value.userId !== 'string') || !Array.isArray(value.cookies)) return false;
-  return value.cookies.every((cookie) => isRecord(cookie) && typeof cookie.name === 'string' && typeof cookie.value === 'string' && typeof cookie.domain === 'string');
-}
+const sessionSchema = z.object({ token: z.string().nullable(), cookies: z.array(z.object({ name: z.string(), value: z.string(), domain: z.string() })), userId: z.string().nullable() });
+type Session = z.infer<typeof sessionSchema>;
 
 function loadSession(): Session {
   if (!fs.existsSync(SESSION_PATH)) {
     throw new Error('No session found. Run: npm run login');
   }
-  const value: unknown = JSON.parse(fs.readFileSync(SESSION_PATH, 'utf8'));
-  if (!isSession(value)) throw new Error('Stored session has an invalid format. Run: npm run login');
-  return value;
+  return sessionSchema.parse(JSON.parse(fs.readFileSync(SESSION_PATH, 'utf8')));
 }
 
 let cachedSession: Session | undefined;
