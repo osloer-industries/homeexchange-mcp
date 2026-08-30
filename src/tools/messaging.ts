@@ -2,11 +2,16 @@ import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod/v3';
 import { api } from '../api';
 import { type Args } from './args';
-import { requiredStringTool } from './tool-schema';
 import { zodTool } from './zod-tool';
 
 const conversationIdArgs = z.object({ conversation_id: z.string().min(1) });
 const sendMessageArgs = conversationIdArgs.extend({ text: z.string().min(1) });
+const listConversationsArgs = z.object({
+  after: z.string().min(1).optional(),
+  filter: z.enum(['ALL', 'UNANSWERED', 'ARCHIVED']).default('ALL'),
+  limit: z.number().int().positive().default(20),
+});
+const startConversationArgs = z.object({ home_id: z.string().min(1), text: z.string().min(1) });
 
 export const messagingTools: Tool[] = [
   {
@@ -30,44 +35,13 @@ export const messagingTools: Tool[] = [
     'Get extended information about a conversation.',
     conversationIdArgs
   ),
-  requiredStringTool(
-    'send_message',
-    'Send a message in an existing conversation.',
-    { conversation_id: 'Conversation ID', text: 'Message text to send' }
-  ),
-  requiredStringTool(
-    'get_exchange_request',
-    'Get exchange request details for a conversation.',
-    { conversation_id: 'Conversation ID' }
-  ),
-  requiredStringTool(
-    'get_messages',
-    'Get all messages of a conversation.',
-    { conversation_id: 'Conversation ID' }
-  ),
-  requiredStringTool(
-    'pre_approve_exchange',
-    'Pre-approve an exchange request.',
-    { conversation_id: 'Conversation ID' }
-  ),
-  requiredStringTool(
-    'archive_conversation',
-    'Archive a conversation.',
-    { conversation_id: 'Conversation ID' }
-  ),
-  requiredStringTool(
-    'start_conversation',
-    'Start a new conversation with a member about their home.',
-    { home_id: 'The home you are enquiring about', text: 'Opening message' }
-  ),
+  zodTool('send_message', 'Send a message in an existing conversation.', sendMessageArgs),
+  zodTool('get_exchange_request', 'Get exchange request details for a conversation.', conversationIdArgs),
+  zodTool('get_messages', 'Get all messages of a conversation.', conversationIdArgs),
+  zodTool('pre_approve_exchange', 'Pre-approve an exchange request.', conversationIdArgs),
+  zodTool('archive_conversation', 'Archive a conversation.', conversationIdArgs),
+  zodTool('start_conversation', 'Start a new conversation with a member about their home.', startConversationArgs),
 ];
-
-const listConversationsArgs = z.object({
-  after: z.string().min(1).optional(),
-  filter: z.enum(['ALL', 'UNANSWERED', 'ARCHIVED']).default('ALL'),
-  limit: z.number().int().positive().default(20),
-});
-const startConversationArgs = z.object({ home_id: z.string().min(1), text: z.string().min(1) });
 
 export async function handleMessaging(name: string, args: Args): Promise<unknown> {
   switch (name) {
