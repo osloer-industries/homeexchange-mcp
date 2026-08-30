@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { z } from 'zod/v3';
 
 export interface HarEntry {
   request: {
@@ -19,18 +20,7 @@ export interface ApiMap {
   authenticatedRequestsFound: boolean;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function isHarEntry(value: unknown): value is HarEntry {
-  if (!isRecord(value) || !isRecord(value.request) || !isRecord(value.response)) return false;
-  return typeof value.request.method === 'string' && typeof value.request.url === 'string' && Array.isArray(value.request.headers) && typeof value.response.status === 'number';
-}
-
-function isHar(value: unknown): value is Har {
-  return isRecord(value) && isRecord(value.log) && Array.isArray(value.log.entries) && value.log.entries.every(isHarEntry);
-}
+const harSchema = z.object({ log: z.object({ entries: z.array(z.object({ request: z.object({ method: z.string(), url: z.string(), headers: z.array(z.object({ name: z.string(), value: z.string() })) }), response: z.object({ status: z.number() }) })) }) });
 
 function isApiCall(entry: HarEntry): boolean {
   return entry.request.url.includes('/api/') || entry.request.headers.some(
@@ -77,8 +67,7 @@ export function analyze(
     throw new Error('No HAR file found. Run: npm run record first.');
   }
 
-  const har: unknown = JSON.parse(fs.readFileSync(harPath, 'utf8'));
-  if (!isHar(har)) throw new Error('HAR file has an invalid format.');
+  const har = harSchema.parse(JSON.parse(fs.readFileSync(harPath, 'utf8')));
   const summary = createApiMap(har.log.entries);
 
   log(
