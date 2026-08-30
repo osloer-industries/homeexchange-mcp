@@ -7,7 +7,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.spec.ts', 'src/analyze.ts', 'src/login.ts', 'src/record.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
       thresholds: {
         branches: 80,
         functions: 80,

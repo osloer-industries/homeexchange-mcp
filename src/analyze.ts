@@ -1,95 +1,92 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-interface HarEntry {
+export interface HarEntry {
   request: {
     method: string;
     url: string;
     headers: { name: string; value: string }[];
-    postData?: { text?: string };
   };
-  response: {
-    status: number;
-    headers: { name: string; value: string }[];
-    content: { text?: string; mimeType: string };
-  };
+  response: { status: number };
 }
 
-interface Har {
+export interface Har {
   log: { entries: HarEntry[] };
 }
 
-function extractToken(entries: HarEntry[]): string | null {
-  for (const entry of entries) {
-    const auth = entry.request.headers.find(
-      (h) => h.name.toLowerCase() === 'authorization'
-    );
-    if (auth) return auth.value;
-  }
-  return null;
+export interface ApiMap {
+  endpoints: { endpoint: string; statuses: string[] }[];
+  authenticatedRequestsFound: boolean;
 }
 
-function analyze() {
-  const harPath = path.resolve(__dirname, '../homeexchange.har');
-
-  if (!fs.existsSync(harPath)) {
-    console.error('No HAR file found. Run: npm run record first.');
-    process.exit(1);
-  }
-
-  const har: Har = JSON.parse(fs.readFileSync(harPath, 'utf8')) as Har;
-  const entries = har.log.entries;
-
-  // Filter to API calls only
-  const apiCalls = entries.filter((e) =>
-    e.request.url.includes('/api/') ||
-    e.request.headers.some(
-      (h) => h.name.toLowerCase() === 'authorization'
-    )
+function isApiCall(entry: HarEntry): boolean {
+  return entry.request.url.includes('/api/') || entry.request.headers.some(
+    (header) => header.name.toLowerCase() === 'authorization'
   );
-
-  // Extract auth token
-  const token = extractToken(apiCalls);
-  if (token) {
-    console.log('\n🔑 Auth token found:');
-    console.log(`   ${token.slice(0, 60)}...`);
-  } else {
-    console.log('\n⚠️  No auth token found - did you log in?');
-  }
-
-  // Group endpoints
-  const endpoints = new Map<string, Set<string>>();
-  for (const entry of apiCalls) {
-    const url = new URL(entry.request.url);
-    const key = `${entry.request.method} ${url.pathname}`;
-    if (!endpoints.has(key)) endpoints.set(key, new Set());
-    endpoints.get(key)!.add(entry.response.status.toString());
-  }
-
-  console.log(`\n📡 API endpoints captured (${endpoints.size}):\n`);
-  for (const [endpoint, statuses] of [...endpoints.entries()].sort()) {
-    console.log(`   ${endpoint}  [${[...statuses].join(', ')}]`);
-  }
-
-  // Save summary
-  const summary = {
-    token,
-    endpoints: [...endpoints.entries()].map(([endpoint, statuses]) => ({
-      endpoint,
-      statuses: [...statuses],
-    })),
-    rawApiCalls: apiCalls.map((e) => ({
-      method: e.request.method,
-      url: e.request.url,
-      status: e.response.status,
-      requestBody: e.request.postData?.text ?? null,
-      responseBody: e.response.content.text ?? null,
-    })),
-  };
-
-  const outPath = path.resolve(__dirname, '../api-map.json');
-  fs.writeFileSync(outPath, JSON.stringify(summary, null, 2));
-  console.log(`\n💾 Full API map saved to api-map.json`);
 }
 
-analyze();
+/**
+ * Produces a safe endpoint inventory from a HAR capture. The output deliberately
+ * contains no credentials, URLs with query strings, request bodies, or responses.
+ */
+export function createApiMap(entries: HarEntry[]): ApiMap {
+  const endpoints = new Map<string, Set<string>>();
+  let authenticatedRequestsFound = false;
+
+  for (const entry of entries.filter(isApiCall)) {
+    authenticatedRequestsFound ||= entry.request.headers.some(
+      (header) => header.name.toLowerCase() === 'authorization'
+    );
+    const url = new URL(entry.request.url);
+    const endpoint = `${entry.request.method} ${url.pathname}`;
+    const statuses = endpoints.get(endpoint) ?? new Set<string>();
+    statuses.add(entry.response.status.toString());
+    endpoints.set(endpoint, statuses);
+  }
+
+  return {
+    authenticatedRequestsFound,
+    endpoints: [...endpoints.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([endpoint, statuses]) => ({
+        endpoint,
+        statuses: [...statuses].sort(),
+      })),
+  };
+}
+
+export function analyze(
+  harPath = path.resolve(__dirname, '../homeexchange.har'),
+  outPath = path.resolve(__dirname, '../api-map.json'),
+  log: (message: string) => void = console.log
+): ApiMap {
+  if (!fs.existsSync(harPath)) {
+    throw new Error('No HAR file found. Run: npm run record first.');
+  }
+
+  const har = JSON.parse(fs.readFileSync(harPath, 'utf8')) as Har;
+  const summary = createApiMap(har.log.entries);
+
+  log(
+    summary.authenticatedRequestsFound
+      ? 'Authenticated API requests found. Credentials are not displayed or saved.'
+      : 'No authenticated API requests found. Did you log in?'
+  );
+  log(`API endpoints captured (${summary.endpoints.length}):`);
+  for (const { endpoint, statuses } of summary.endpoints) {
+    log(`  ${endpoint}  [${statuses.join(', ')}]`);
+  }
+
+  fs.writeFileSync(outPath, JSON.stringify(summary, null, 2));
+  log('Safe API endpoint map saved to api-map.json');
+  return summary;
+}
+
+if (require.main === module) {
+  try {
+    analyze();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
+}
