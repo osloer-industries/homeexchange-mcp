@@ -1,20 +1,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { z } from 'zod/v3';
 import { isHomeExchangeApiUrl, isHomeExchangeHostname } from './security';
+import { type HomeExchangeClient } from './application/ports/homeexchange-client';
+import { HOMEEXCHANGE_API_ORIGINS } from './domain/homeexchange-origins';
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
 
-interface Session {
-  token: string | null;
-  cookies: { name: string; value: string; domain: string }[];
-  userId: string | null;
-}
+const sessionSchema = z.object({ token: z.string().nullable(), cookies: z.array(z.object({ name: z.string(), value: z.string(), domain: z.string() })), userId: z.string().nullable() });
+type Session = z.infer<typeof sessionSchema>;
 
 function loadSession(): Session {
   if (!fs.existsSync(SESSION_PATH)) {
     throw new Error('No session found. Run: npm run login');
   }
-  return JSON.parse(fs.readFileSync(SESSION_PATH, 'utf8')) as Session;
+  return sessionSchema.parse(JSON.parse(fs.readFileSync(SESSION_PATH, 'utf8')));
 }
 
 let cachedSession: Session | undefined;
@@ -46,16 +46,12 @@ function baseHeaders(): Record<string, string> {
 
 function mergeHeaders(base: Record<string, string>, override?: RequestInit['headers']): Record<string, string> {
   if (!override) return base;
-  const entries =
-    override instanceof Headers
-      ? [...override.entries()]
-      : Array.isArray(override)
-        ? override
-        : Object.entries(override);
-  return { ...base, ...(Object.fromEntries(entries) as Record<string, string>) };
+  const headers = new Headers(base);
+  new Headers(override).forEach((value, name) => headers.set(name, value));
+  return Object.fromEntries(headers.entries());
 }
 
-async function request<T>(url: URL, init: RequestInit = {}): Promise<T> {
+async function request(url: URL, init: RequestInit = {}): Promise<unknown> {
   if (!isHomeExchangeApiUrl(url)) {
     throw new Error(`Refusing request to untrusted origin: ${url.origin}`);
   }
@@ -74,48 +70,48 @@ async function request<T>(url: URL, init: RequestInit = {}): Promise<T> {
   }
 
   const text = await res.text();
-  return text ? (JSON.parse(text) as T) : ({} as T);
+  return text ? JSON.parse(text) : {};
 }
 
-export const api = {
-  bff<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
-    const url = new URL(`https://bff.homeexchange.com${endpoint}`);
+export const api: HomeExchangeClient = {
+  bff(endpoint: string, params?: Record<string, string>): Promise<unknown> {
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.bff}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url);
+    return request(url);
   },
 
-  bffPost<T>(
+  bffPost(
     endpoint: string,
     body: unknown,
     params?: Record<string, string>,
     headers?: Record<string, string>
-  ): Promise<T> {
-    const url = new URL(`https://bff.homeexchange.com${endpoint}`);
+  ): Promise<unknown> {
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.bff}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'POST', body: JSON.stringify(body), headers });
+    return request(url, { method: 'POST', body: JSON.stringify(body), headers });
   },
 
-  bffPatch<T>(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<T> {
-    const url = new URL(`https://bff.homeexchange.com${endpoint}`);
+  bffPatch(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<unknown> {
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.bff}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
+    return request(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
   },
 
-  get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
-    const url = new URL(`https://api.homeexchange.com${endpoint}`);
+  get(endpoint: string, params?: Record<string, string>): Promise<unknown> {
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.api}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url);
+    return request(url);
   },
 
-  post<T>(endpoint: string, body: unknown, params?: Record<string, string>): Promise<T> {
-    const url = new URL(`https://api.homeexchange.com${endpoint}`);
+  post(endpoint: string, body: unknown, params?: Record<string, string>): Promise<unknown> {
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.api}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'POST', body: JSON.stringify(body) });
+    return request(url, { method: 'POST', body: JSON.stringify(body) });
   },
 
-  del<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
-    const url = new URL(`https://api.homeexchange.com${endpoint}`);
+  del(endpoint: string, params?: Record<string, string>): Promise<unknown> {
+    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.api}${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'DELETE' });
+    return request(url, { method: 'DELETE' });
   },
 };

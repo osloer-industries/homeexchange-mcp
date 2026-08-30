@@ -1,5 +1,14 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod/v3';
 import { api } from '../api';
+
+const searchArgsSchema = z.object({
+  adults: z.number().optional(), children: z.number().optional(), guests: z.number().optional(),
+  checkin: z.string().optional(), checkout: z.string().optional(), exchange_type: z.string().optional(),
+  home_id: z.string().optional(), home_type: z.string().optional(), limit: z.number().optional(),
+  location: z.string().optional(), offset: z.number().optional(),
+}).passthrough();
+type Args = z.infer<typeof searchArgsSchema>;
 
 const SEARCH_HEADERS: Record<string, string> = {
   'X-SEARCH-API-VERSION': 'v2',
@@ -107,8 +116,6 @@ export const searchTools: Tool[] = [
   },
 ];
 
-type Args = Record<string, unknown>;
-
 interface GeocodingFeature {
   bbox?: [number, number, number, number];
   geometry: { coordinates: [number, number] };
@@ -117,6 +124,11 @@ interface GeocodingFeature {
 
 interface GeocodingResponse {
   features?: GeocodingFeature[];
+}
+
+function isGeocodingResponse(value: unknown): value is GeocodingResponse {
+  if (typeof value !== 'object' || value === null || !('features' in value)) return false;
+  return Array.isArray(value.features);
 }
 
 interface SearchHome {
@@ -132,6 +144,10 @@ interface SearchResponse {
   homes?: SearchHome[];
   results?: SearchHome[];
   [key: string]: unknown;
+}
+
+function isSearchResponse(value: unknown): value is SearchResponse {
+  return typeof value === 'object' && value !== null;
 }
 
 interface GeocodedLocation {
@@ -157,7 +173,8 @@ async function geocodeLocation(location: string): Promise<GeocodedLocation> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not geocode ${location}.`);
 
-  const feature = ((await response.json()) as GeocodingResponse).features?.[0];
+  const body: unknown = await response.json();
+  const feature = isGeocodingResponse(body) ? body.features?.[0] : undefined;
   if (!feature?.properties.id) throw new Error(`No location found for ${location}.`);
 
   const [lon, lat] = feature.geometry.coordinates;
@@ -191,70 +208,52 @@ function filterToLocation(response: SearchResponse, location: GeocodedLocation):
 function searchBody(args: Args, location?: GeocodedLocation): Record<string, unknown> {
   const query: Record<string, unknown> = {
     guests: {
-      adults: (args['adults'] as number | undefined) ?? (args['guests'] as number | undefined) ?? 2,
-      children: (args['children'] as number | undefined) ?? 0,
+      adults: args.adults ?? args.guests ?? 2,
+      children: args.children ?? 0,
     },
   };
-  if (args['checkin'] && args['checkout']) {
-    query['dateRanges'] = [{ from: args['checkin'], to: args['checkout'] }];
+  if (args.checkin && args.checkout) {
+    query['dateRanges'] = [{ from: args.checkin, to: args.checkout }];
   }
   if (location) {
     query['locationId'] = location.locationId;
     query['provider'] = location.provider;
   }
-  if (args['exchange_type']) query['exchangeTypes'] = [args['exchange_type']];
-  if (args['home_type']) query['homeTypes'] = [args['home_type']];
+  if (args.exchange_type) query['exchangeTypes'] = [args.exchange_type];
+  if (args.home_type) query['homeTypes'] = [args.home_type];
   return { search_query: query };
 }
 
+function numericParameter(args: Args, name: 'limit' | 'offset', fallback: number): number {
+  return args[name] ?? fallback;
+}
+
+async function searchHomes(args: Args): Promise<SearchResponse> {
+  const limit = Math.min(Math.max(numericParameter(args, 'limit', 20), 1), 200);
+  const offset = Math.max(numericParameter(args, 'offset', 0), 0);
+  const locationName = args.location;
+  const location = locationName ? await geocodeLocation(locationName) : undefined;
+  const response = await api.bffPost('/search/homes', searchBody(args, location), {
+    limit: String(limit), offset: String(offset),
+  }, SEARCH_HEADERS);
+  if (!isSearchResponse(response)) throw new Error('Search returned an invalid response.');
+  return location ? filterToLocation(response, location) : response;
+}
+
+const handlers: Record<string, (args: Args) => Promise<unknown>> = {
+  search_homes: searchHomes,
+  get_home: (args) => api.bff(`/homes/${z.string().min(1).parse(args.home_id)}`),
+  get_home_calendar: (args) => api.get(`/v1/homes/${z.string().min(1).parse(args.home_id)}/calendar`),
+  get_recommendations: (args) => api.bffPost('/search/recommendation', {}, { limit: String(numericParameter(args, 'limit', 8)) }),
+  list_my_homes: () => api.bff('/v1/homes/me'),
+  list_favorites: (args) => api.get('/v2/favorites/me', { 'filters[status]': '1', 'order_by[createdAt]': 'DESC', limit: String(numericParameter(args, 'limit', 20)) }),
+  add_favorite: (args) => api.post('/v2/favorites', { homeId: args['home_id'] }),
+  remove_favorite: (args) => api.del(`/v2/favorites/${z.string().min(1).parse(args.home_id)}`),
+  list_saved_searches: (args) => api.bff('/search/saved-searches', { limit: String(numericParameter(args, 'limit', 100)) }),
+};
+
 export async function handleSearch(name: string, args: Args): Promise<unknown> {
-  switch (name) {
-    case 'search_homes': {
-      const limit = Math.min(Math.max((args['limit'] as number | undefined) ?? 20, 1), 200);
-      const offset = Math.max((args['offset'] as number | undefined) ?? 0, 0);
-      const location = args['location'] ? await geocodeLocation(args['location'] as string) : undefined;
-      const response = await api.bffPost<SearchResponse>('/search/homes', searchBody(args, location), {
-        limit: String(limit),
-        offset: String(offset),
-      }, SEARCH_HEADERS);
-      return location ? filterToLocation(response, location) : response;
-    }
-
-    case 'get_home':
-      return api.bff(`/homes/${args['home_id'] as string}`);
-
-    case 'get_home_calendar':
-      return api.get(`/v1/homes/${args['home_id'] as string}/calendar`);
-
-    case 'get_recommendations': {
-      const limit = (args['limit'] as number | undefined) ?? 8;
-      return api.bffPost('/search/recommendation', {}, { limit: String(limit) });
-    }
-
-    case 'list_my_homes':
-      return api.bff('/v1/homes/me');
-
-    case 'list_favorites': {
-      const limit = (args['limit'] as number | undefined) ?? 20;
-      return api.get('/v2/favorites/me', {
-        'filters[status]': '1',
-        'order_by[createdAt]': 'DESC',
-        limit: String(limit),
-      });
-    }
-
-    case 'add_favorite':
-      return api.post('/v2/favorites', { homeId: args['home_id'] });
-
-    case 'remove_favorite':
-      return api.del(`/v2/favorites/${args['home_id'] as string}`);
-
-    case 'list_saved_searches': {
-      const limit = (args['limit'] as number | undefined) ?? 100;
-      return api.bff('/search/saved-searches', { limit: String(limit) });
-    }
-
-    default:
-      throw new Error(`Unknown search tool: ${name}`);
-  }
+  const handler = handlers[name];
+  if (!handler) throw new Error(`Unknown search tool: ${name}`);
+  return handler(searchArgsSchema.parse(args));
 }

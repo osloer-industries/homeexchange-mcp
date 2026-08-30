@@ -1,8 +1,10 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod/v3';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  type CallToolResult,
 } from '@modelcontextprotocol/sdk/types.js';
 
 import { searchTools, handleSearch } from './tools/search';
@@ -14,6 +16,8 @@ const SEARCH_NAMES = new Set(searchTools.map((t) => t.name));
 const MESSAGING_NAMES = new Set(messagingTools.map((t) => t.name));
 const USER_NAMES = new Set(userTools.map((t) => t.name));
 
+const argsSchema = z.record(z.unknown());
+
 export function listTools() {
   return { tools: allTools };
 }
@@ -21,7 +25,7 @@ export function listTools() {
 export async function handleToolCall(
   name: string,
   args: Record<string, unknown> = {}
-) {
+): Promise<CallToolResult> {
   try {
     let result: unknown;
 
@@ -36,12 +40,12 @@ export async function handleToolCall(
     }
 
     return {
-      content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return {
-      content: [{ type: 'text' as const, text: `Error: ${message}` }],
+      content: [{ type: 'text', text: `Error: ${message}` }],
       isError: true,
     };
   }
@@ -56,7 +60,7 @@ export function createServer(): Server {
   server.setRequestHandler(ListToolsRequestSchema, async () => listTools());
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args = {} } = req.params;
-    return handleToolCall(name, args as Record<string, unknown>);
+    return handleToolCall(name, argsSchema.parse(args));
   });
 
   return server;
@@ -64,9 +68,9 @@ export function createServer(): Server {
 
 export async function main(
   server: Server = createServer(),
-  transport: StdioServerTransport = new StdioServerTransport()
+  connect: (target: StdioServerTransport) => Promise<void> = (target) => server.connect(target)
 ) {
-  await server.connect(transport);
+  await connect(new StdioServerTransport());
   process.stderr.write('HomeExchange MCP server running (stdio)\n');
 }
 
