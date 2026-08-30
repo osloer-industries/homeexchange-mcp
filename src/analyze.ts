@@ -19,6 +19,19 @@ export interface ApiMap {
   authenticatedRequestsFound: boolean;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isHarEntry(value: unknown): value is HarEntry {
+  if (!isRecord(value) || !isRecord(value.request) || !isRecord(value.response)) return false;
+  return typeof value.request.method === 'string' && typeof value.request.url === 'string' && Array.isArray(value.request.headers) && typeof value.response.status === 'number';
+}
+
+function isHar(value: unknown): value is Har {
+  return isRecord(value) && isRecord(value.log) && Array.isArray(value.log.entries) && value.log.entries.every(isHarEntry);
+}
+
 function isApiCall(entry: HarEntry): boolean {
   return entry.request.url.includes('/api/') || entry.request.headers.some(
     (header) => header.name.toLowerCase() === 'authorization'
@@ -64,7 +77,8 @@ export function analyze(
     throw new Error('No HAR file found. Run: npm run record first.');
   }
 
-  const har = JSON.parse(fs.readFileSync(harPath, 'utf8')) as Har;
+  const har: unknown = JSON.parse(fs.readFileSync(harPath, 'utf8'));
+  if (!isHar(har)) throw new Error('HAR file has an invalid format.');
   const summary = createApiMap(har.log.entries);
 
   log(

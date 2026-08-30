@@ -1,5 +1,6 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { api } from '../api';
+import { optionalNumber, optionalString, requiredString, type Args } from './args';
 
 const SEARCH_HEADERS: Record<string, string> = {
   'X-SEARCH-API-VERSION': 'v2',
@@ -107,8 +108,6 @@ export const searchTools: Tool[] = [
   },
 ];
 
-type Args = Record<string, unknown>;
-
 interface GeocodingFeature {
   bbox?: [number, number, number, number];
   geometry: { coordinates: [number, number] };
@@ -117,6 +116,11 @@ interface GeocodingFeature {
 
 interface GeocodingResponse {
   features?: GeocodingFeature[];
+}
+
+function isGeocodingResponse(value: unknown): value is GeocodingResponse {
+  if (typeof value !== 'object' || value === null || !('features' in value)) return false;
+  return Array.isArray(value.features);
 }
 
 interface SearchHome {
@@ -132,6 +136,10 @@ interface SearchResponse {
   homes?: SearchHome[];
   results?: SearchHome[];
   [key: string]: unknown;
+}
+
+function isSearchResponse(value: unknown): value is SearchResponse {
+  return typeof value === 'object' && value !== null;
 }
 
 interface GeocodedLocation {
@@ -157,7 +165,8 @@ async function geocodeLocation(location: string): Promise<GeocodedLocation> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not geocode ${location}.`);
 
-  const feature = ((await response.json()) as GeocodingResponse).features?.[0];
+  const body: unknown = await response.json();
+  const feature = isGeocodingResponse(body) ? body.features?.[0] : undefined;
   if (!feature?.properties.id) throw new Error(`No location found for ${location}.`);
 
   const [lon, lat] = feature.geometry.coordinates;
@@ -191,8 +200,8 @@ function filterToLocation(response: SearchResponse, location: GeocodedLocation):
 function searchBody(args: Args, location?: GeocodedLocation): Record<string, unknown> {
   const query: Record<string, unknown> = {
     guests: {
-      adults: (args['adults'] as number | undefined) ?? (args['guests'] as number | undefined) ?? 2,
-      children: (args['children'] as number | undefined) ?? 0,
+      adults: optionalNumber(args, 'adults') ?? optionalNumber(args, 'guests') ?? 2,
+      children: optionalNumber(args, 'children') ?? 0,
     },
   };
   if (args['checkin'] && args['checkout']) {
@@ -208,29 +217,30 @@ function searchBody(args: Args, location?: GeocodedLocation): Record<string, unk
 }
 
 function numericParameter(args: Args, name: string, fallback: number): number {
-  const value = args[name];
-  return typeof value === 'number' ? value : fallback;
+  return optionalNumber(args, name) ?? fallback;
 }
 
 async function searchHomes(args: Args): Promise<SearchResponse> {
   const limit = Math.min(Math.max(numericParameter(args, 'limit', 20), 1), 200);
   const offset = Math.max(numericParameter(args, 'offset', 0), 0);
-  const location = args['location'] ? await geocodeLocation(args['location'] as string) : undefined;
-  const response = await api.bffPost<SearchResponse>('/search/homes', searchBody(args, location), {
+  const locationName = optionalString(args, 'location');
+  const location = locationName ? await geocodeLocation(locationName) : undefined;
+  const response = await api.bffPost('/search/homes', searchBody(args, location), {
     limit: String(limit), offset: String(offset),
   }, SEARCH_HEADERS);
+  if (!isSearchResponse(response)) throw new Error('Search returned an invalid response.');
   return location ? filterToLocation(response, location) : response;
 }
 
 const handlers: Record<string, (args: Args) => Promise<unknown>> = {
   search_homes: searchHomes,
-  get_home: (args) => api.bff(`/homes/${args['home_id'] as string}`),
-  get_home_calendar: (args) => api.get(`/v1/homes/${args['home_id'] as string}/calendar`),
+  get_home: (args) => api.bff(`/homes/${requiredString(args, 'home_id')}`),
+  get_home_calendar: (args) => api.get(`/v1/homes/${requiredString(args, 'home_id')}/calendar`),
   get_recommendations: (args) => api.bffPost('/search/recommendation', {}, { limit: String(numericParameter(args, 'limit', 8)) }),
   list_my_homes: () => api.bff('/v1/homes/me'),
   list_favorites: (args) => api.get('/v2/favorites/me', { 'filters[status]': '1', 'order_by[createdAt]': 'DESC', limit: String(numericParameter(args, 'limit', 20)) }),
   add_favorite: (args) => api.post('/v2/favorites', { homeId: args['home_id'] }),
-  remove_favorite: (args) => api.del(`/v2/favorites/${args['home_id'] as string}`),
+  remove_favorite: (args) => api.del(`/v2/favorites/${requiredString(args, 'home_id')}`),
   list_saved_searches: (args) => api.bff('/search/saved-searches', { limit: String(numericParameter(args, 'limit', 100)) }),
 };
 

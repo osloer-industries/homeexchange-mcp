@@ -53,7 +53,7 @@ describe('api client', () => {
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
       method: 'POST',
       body: JSON.stringify({ message: 'hello' }),
-      headers: expect.objectContaining({ 'X-Test': 'yes' }),
+      headers: expect.objectContaining({ 'x-test': 'yes' }),
     });
   });
 

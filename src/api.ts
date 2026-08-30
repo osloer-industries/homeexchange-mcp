@@ -10,11 +10,22 @@ interface Session {
   userId: string | null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isSession(value: unknown): value is Session {
+  if (!isRecord(value) || (value.token !== null && typeof value.token !== 'string') || (value.userId !== null && typeof value.userId !== 'string') || !Array.isArray(value.cookies)) return false;
+  return value.cookies.every((cookie) => isRecord(cookie) && typeof cookie.name === 'string' && typeof cookie.value === 'string' && typeof cookie.domain === 'string');
+}
+
 function loadSession(): Session {
   if (!fs.existsSync(SESSION_PATH)) {
     throw new Error('No session found. Run: npm run login');
   }
-  return JSON.parse(fs.readFileSync(SESSION_PATH, 'utf8')) as Session;
+  const value: unknown = JSON.parse(fs.readFileSync(SESSION_PATH, 'utf8'));
+  if (!isSession(value)) throw new Error('Stored session has an invalid format. Run: npm run login');
+  return value;
 }
 
 let cachedSession: Session | undefined;
@@ -46,16 +57,12 @@ function baseHeaders(): Record<string, string> {
 
 function mergeHeaders(base: Record<string, string>, override?: RequestInit['headers']): Record<string, string> {
   if (!override) return base;
-  const entries =
-    override instanceof Headers
-      ? [...override.entries()]
-      : Array.isArray(override)
-        ? override
-        : Object.entries(override);
-  return { ...base, ...(Object.fromEntries(entries) as Record<string, string>) };
+  const headers = new Headers(base);
+  new Headers(override).forEach((value, name) => headers.set(name, value));
+  return Object.fromEntries(headers.entries());
 }
 
-async function request<T>(url: URL, init: RequestInit = {}): Promise<T> {
+async function request(url: URL, init: RequestInit = {}): Promise<unknown> {
   if (!isHomeExchangeApiUrl(url)) {
     throw new Error(`Refusing request to untrusted origin: ${url.origin}`);
   }
@@ -74,48 +81,48 @@ async function request<T>(url: URL, init: RequestInit = {}): Promise<T> {
   }
 
   const text = await res.text();
-  return text ? (JSON.parse(text) as T) : ({} as T);
+  return text ? JSON.parse(text) : {};
 }
 
 export const api = {
-  bff<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+  bff(endpoint: string, params?: Record<string, string>): Promise<unknown> {
     const url = new URL(`https://bff.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url);
+    return request(url);
   },
 
-  bffPost<T>(
+  bffPost(
     endpoint: string,
     body: unknown,
     params?: Record<string, string>,
     headers?: Record<string, string>
-  ): Promise<T> {
+  ): Promise<unknown> {
     const url = new URL(`https://bff.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'POST', body: JSON.stringify(body), headers });
+    return request(url, { method: 'POST', body: JSON.stringify(body), headers });
   },
 
-  bffPatch<T>(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<T> {
+  bffPatch(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<unknown> {
     const url = new URL(`https://bff.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
+    return request(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
   },
 
-  get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+  get(endpoint: string, params?: Record<string, string>): Promise<unknown> {
     const url = new URL(`https://api.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url);
+    return request(url);
   },
 
-  post<T>(endpoint: string, body: unknown, params?: Record<string, string>): Promise<T> {
+  post(endpoint: string, body: unknown, params?: Record<string, string>): Promise<unknown> {
     const url = new URL(`https://api.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'POST', body: JSON.stringify(body) });
+    return request(url, { method: 'POST', body: JSON.stringify(body) });
   },
 
-  del<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+  del(endpoint: string, params?: Record<string, string>): Promise<unknown> {
     const url = new URL(`https://api.homeexchange.com${endpoint}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request<T>(url, { method: 'DELETE' });
+    return request(url, { method: 'DELETE' });
   },
 };
