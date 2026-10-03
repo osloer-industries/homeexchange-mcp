@@ -2,40 +2,13 @@ import { chromium } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
 import { clearInterval, clearTimeout, setInterval, setTimeout } from 'node:timers';
+import { type Browser, type LoginPage, type SessionCookie } from '../../application/ports/browser';
 import { isHomeExchangeHostname } from '../../security';
 
 const defaultSessionPath = path.resolve(__dirname, '../session.json');
 
-interface SessionCookie {
-  name: string;
-  value: string;
-  domain: string;
-}
-
-interface RequestLike {
-  headers(): Record<string, string | undefined>;
-  url(): string;
-}
-
-interface PageLike {
-  goto(url: string): Promise<unknown>;
-  on(event: 'request', listener: (request: RequestLike) => void): void;
-}
-
-interface ContextLike {
-  cookies(): Promise<SessionCookie[]>;
-  newPage(): Promise<PageLike>;
-}
-
-interface BrowserLike {
-  close(): Promise<void>;
-  isConnected(): boolean;
-  newContext(options: { viewport: { height: number; width: number } }): Promise<ContextLike>;
-  on(event: 'disconnected', listener: () => void): void;
-}
-
 export interface LoginOptions {
-  launchBrowser?: () => Promise<BrowserLike>;
+  launchBrowser?: () => Promise<Browser<LoginPage, SessionCookie>>;
   log?: (message: string) => void;
   sessionPath?: string;
   waitForSave?: (save: () => Promise<void>) => Promise<void>;
