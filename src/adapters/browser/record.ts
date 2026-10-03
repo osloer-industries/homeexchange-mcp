@@ -1,55 +1,33 @@
 import { chromium } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  type Browser,
+  type BrowserContext,
+  type RecordingPage,
+  type RecordingRequest,
+  type RecordingResponse,
+} from '../../application/ports/browser';
 import { isHomeExchangeApiUrl } from '../../security';
 
 const defaultSessionPath = path.resolve(__dirname, '../session.json');
 const credentialHeaders = ['authorization', 'x-auth-token', 'x-access-token', 'x-api-key'];
 
-interface RequestLike {
-  headers(): Record<string, string | undefined>;
-  method(): string;
-  url(): string;
-}
-
-interface ResponseLike {
-  request(): { url(): string };
-  status(): number;
-}
-
-interface PageLike {
-  goto(url: string): Promise<unknown>;
-  on(event: 'request', listener: (request: RequestLike) => void): void;
-  on(event: 'response', listener: (response: ResponseLike) => void): void;
-}
-
 export interface RecorderPage {
   goto(url: string): Promise<unknown>;
-  onRequest(listener: (request: RequestLike) => void): void;
-  onResponse(listener: (response: ResponseLike) => void): void;
-}
-
-interface ContextLike {
-  cookies(): Promise<unknown[]>;
-  newPage(): Promise<PageLike>;
-}
-
-interface BrowserLike {
-  close(): Promise<void>;
-  isConnected(): boolean;
-  newContext(options: { viewport: { height: number; width: number } }): Promise<ContextLike>;
-  on(event: 'disconnected', listener: () => void): void;
+  onRequest(listener: (request: RecordingRequest) => void): void;
+  onResponse(listener: (response: RecordingResponse) => void): void;
 }
 
 export interface RecordOptions {
-  createPage?: (context: ContextLike) => Promise<RecorderPage>;
-  launchBrowser?: () => Promise<BrowserLike>;
+  createPage?: (context: BrowserContext<RecordingPage>) => Promise<RecorderPage>;
+  launchBrowser?: () => Promise<Browser<RecordingPage>>;
   log?: (message: string) => void;
   sessionPath?: string;
   waitForCompletion?: (complete: () => void) => Promise<void>;
 }
 
-export function createRecorderPage(context: ContextLike): Promise<RecorderPage> {
+export function createRecorderPage(context: BrowserContext<RecordingPage>): Promise<RecorderPage> {
   return context.newPage().then((page) => ({
     goto: (url) => page.goto(url),
     onRequest: (listener) => page.on('request', listener),
@@ -57,13 +35,13 @@ export function createRecorderPage(context: ContextLike): Promise<RecorderPage> 
   }));
 }
 
-export function getRequestSummary(request: RequestLike): string | null {
+export function getRequestSummary(request: RecordingRequest): string | null {
   const url = new URL(request.url());
   if (!isHomeExchangeApiUrl(url)) return null;
   return `${request.method()} ${url.pathname}`;
 }
 
-export function getResponseSummary(response: ResponseLike): string | null {
+export function getResponseSummary(response: RecordingResponse): string | null {
   const url = new URL(response.request().url());
   if (!isHomeExchangeApiUrl(url)) return null;
   return `${response.status()} ${url.pathname}`;
