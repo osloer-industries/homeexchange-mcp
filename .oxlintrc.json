@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["import", "typescript", "unicorn", "vitest"],
+  "options": { "typeAware": true, "reportUnusedDisableDirectives": "error" },
+  "categories": { "correctness": "error", "perf": "warn", "suspicious": "error" },
+  "ignorePatterns": ["dist/**", "coverage/**", "node_modules/**"],
+  "rules": {
+    "complexity": ["error", 15], "max-depth": ["error", 4],
+    "max-lines-per-function": ["warn", { "max": 80, "skipBlankLines": true, "skipComments": true }],
+    "max-params": ["warn", 5], "import/no-cycle": "error", "vitest/no-focused-tests": "error",
+    "typescript/no-floating-promises": "error", "typescript/no-misused-promises": "error",
+    "eslint/no-unsafe-optional-chaining": "error", "typescript/no-unsafe-type-assertion": "error",
+    "typescript/no-unnecessary-type-assertion": "error", "typescript/require-array-sort-compare": "off",
+    "unicorn/no-array-sort": "off", "vitest/require-mock-type-parameters": "off"
+  },
+  "overrides": [{ "files": ["src/**/*.test.ts", "src/**/*.spec.ts"], "rules": {
+    "max-lines-per-function": "off", "max-params": "off"
+  } }]
+}
