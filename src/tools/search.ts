@@ -116,45 +116,36 @@ export const searchTools: Tool[] = [
   },
 ];
 
-interface GeocodingFeature {
-  bbox?: [number, number, number, number];
-  geometry: { coordinates: [number, number] };
-  properties: { id?: string; source?: string };
-}
+const geocodingFeatureSchema = z.object({
+  bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
+  geometry: z.object({ coordinates: z.tuple([z.number(), z.number()]) }),
+  properties: z.object({ id: z.string().optional(), source: z.string().optional() }),
+});
+const geocodingResponseSchema = z.object({ features: z.array(geocodingFeatureSchema).optional() });
+const searchHomeSchema = z.object({
+  lat: z.number().optional(),
+  latitude: z.number().optional(),
+  lng: z.number().optional(),
+  longitude: z.number().optional(),
+  location: z.object({
+    lat: z.number().optional(),
+    latitude: z.number().optional(),
+    lng: z.number().optional(),
+    longitude: z.number().optional(),
+  }).optional(),
+}).passthrough();
+const searchResponseSchema = z.object({
+  homes: z.array(searchHomeSchema).optional(),
+  results: z.array(searchHomeSchema).optional(),
+}).passthrough();
 
-interface GeocodingResponse {
-  features?: GeocodingFeature[];
-}
-
-function isGeocodingResponse(value: unknown): value is GeocodingResponse {
-  if (typeof value !== 'object' || value === null || !('features' in value)) return false;
-  return Array.isArray(value.features);
-}
-
-interface SearchHome {
-  lat?: number;
-  latitude?: number;
-  lng?: number;
-  longitude?: number;
-  location?: { lat?: number; latitude?: number; lng?: number; longitude?: number };
-  [key: string]: unknown;
-}
-
-interface SearchResponse {
-  homes?: SearchHome[];
-  results?: SearchHome[];
-  [key: string]: unknown;
-}
-
-function isSearchResponse(value: unknown): value is SearchResponse {
-  return typeof value === 'object' && value !== null;
-}
-
-interface GeocodedLocation {
+type GeocodedLocation = {
   bbox: { maxLat: number; maxLon: number; minLat: number; minLon: number };
   locationId: string;
   provider: string;
-}
+};
+type SearchHome = z.infer<typeof searchHomeSchema>;
+type SearchResponse = z.infer<typeof searchResponseSchema>;
 
 async function geocodeLocation(location: string): Promise<GeocodedLocation> {
   const token = process.env['HOMEEXCHANGE_GEOCODING_TOKEN'];
@@ -173,8 +164,8 @@ async function geocodeLocation(location: string): Promise<GeocodedLocation> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not geocode ${location}.`);
 
-  const body: unknown = await response.json();
-  const feature = isGeocodingResponse(body) ? body.features?.[0] : undefined;
+  const body = geocodingResponseSchema.parse(await response.json());
+  const feature = body.features?.[0];
   if (!feature?.properties.id) throw new Error(`No location found for ${location}.`);
 
   const [lon, lat] = feature.geometry.coordinates;
@@ -236,8 +227,8 @@ async function searchHomes(args: Args): Promise<SearchResponse> {
   const response = await api.bffPost('/search/homes', searchBody(args, location), {
     limit: String(limit), offset: String(offset),
   }, SEARCH_HEADERS);
-  if (!isSearchResponse(response)) throw new Error('Search returned an invalid response.');
-  return location ? filterToLocation(response, location) : response;
+  const parsedResponse = searchResponseSchema.parse(response);
+  return location ? filterToLocation(parsedResponse, location) : parsedResponse;
 }
 
 const handlers: Record<string, (args: Args) => Promise<unknown>> = {
