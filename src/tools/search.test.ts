@@ -344,7 +344,7 @@ describe('search tools', () => {
     it('skips searches that cannot be re-run and ignores criteria the home search does not send', async () => {
       const undated = savedSearch('search-3');
       delete (undated.searchCriteria.location as { provider?: string }).provider;
-      undated.searchCriteria.calendar = { dateRanges: [] };
+      undated.searchCriteria.calendar = { dateRanges: [], flexibleSearch: { duration: 'P7D' } };
       const unnamed = savedSearch();
       delete (unnamed as { externalId?: string }).externalId;
       apiMock.bff.mockResolvedValueOnce({ success: true });
