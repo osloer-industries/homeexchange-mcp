@@ -147,6 +147,18 @@ describe('search tools', () => {
       };
     }
 
+    function readSnapshotContents(filePath: string): { parsed: unknown; mode: number } {
+      const fd = fs.openSync(filePath, 'r');
+      try {
+        return {
+          parsed: JSON.parse(fs.readFileSync(fd, 'utf8')) as unknown,
+          mode: fs.fstatSync(fd).mode & 0o777,
+        };
+      } finally {
+        fs.closeSync(fd);
+      }
+    }
+
     function expectNoSensitiveCopy(value: unknown) {
       const serialized = JSON.stringify(value);
       expect(serialized).not.toContain('redacted');
@@ -216,13 +228,14 @@ describe('search tools', () => {
         }],
       });
       expectNoSensitiveCopy(baseline);
-      expect(JSON.parse(fs.readFileSync(snapshotFile, 'utf8'))).toEqual({
+      const baselineSnapshot = readSnapshotContents(snapshotFile);
+      expect(baselineSnapshot.parsed).toEqual({
         searches: {
           'search-2': { homeIds: ['99'] },
           'search-1': { homeIds: ['10', '11'] },
         },
       });
-      expect(fs.statSync(snapshotFile).mode & 0o777).toBe(0o600);
+      expect(baselineSnapshot.mode).toBe(0o600);
       expect(fs.readdirSync(snapshotDir).some((name) => name.endsWith('.tmp'))).toBe(false);
 
       const updated = await handleSearch('check_saved_search_alerts', {});
@@ -241,13 +254,14 @@ describe('search tools', () => {
           newHomeIds: ['13'],
         }],
       });
-      expect(JSON.parse(fs.readFileSync(snapshotFile, 'utf8'))).toEqual({
+      const updatedSnapshot = readSnapshotContents(snapshotFile);
+      expect(updatedSnapshot.parsed).toEqual({
         searches: {
           'search-2': { homeIds: ['99'] },
           'search-1': { homeIds: ['11', '13'] },
         },
       });
-      expectNoSensitiveCopy(JSON.parse(fs.readFileSync(snapshotFile, 'utf8')));
+      expectNoSensitiveCopy(updatedSnapshot.parsed);
     });
 
     it('skips a saved search when locationId is missing and does not use the network', async () => {

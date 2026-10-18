@@ -324,9 +324,14 @@ function homeIdsFrom(response: SearchResponse): string[] {
 }
 
 function readSnapshot(filePath: string): AlertSnapshot {
-  if (!fs.existsSync(filePath)) return { searches: {} };
+  let raw: string;
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    raw = fs.readFileSync(filePath, 'utf8');
+  } catch {
+    return { searches: {} };
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed) || !isRecord(parsed['searches'])) return { searches: {} };
 
     const searches: AlertSnapshot['searches'] = {};
