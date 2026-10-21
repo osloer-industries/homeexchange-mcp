@@ -25,9 +25,11 @@ and wait for the user to confirm it.
 
 ## Quality, release, and trusted origins
 
-- Use Node.js 22 and npm. Keep exact dependency versions and commit the npm
-  lockfile with dependency changes. Run `npm run check` before submission and
-  `npm audit --omit=dev` when dependencies change.
+- Use Node.js 22 (see `.nvmrc`) and npm. Keep exact dependency versions and
+  commit the lockfile with dependency changes. Before submitting, run in order:
+  `npm ci`, `npm audit --omit=dev --audit-level=high`, `npm run check`
+  (oxlint, typecheck, coverage, build), and `npm run test:mcp` when MCP tools
+  change.
 - `npm run typecheck` is authoritative. Oxlint adds type-aware promise checks,
   cycles, focused-test prevention, and complexity controls, but does not
   replace TypeScript compiler diagnostics.
