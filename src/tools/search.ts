@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { api } from '../api';
 
@@ -105,6 +107,17 @@ export const searchTools: Tool[] = [
       },
     },
   },
+  {
+    name: 'check_saved_search_alerts',
+    description: 'Re-run saved searches and compare home ids with a local snapshot. The first run stores a baseline. Later runs report ids that were not in the previous snapshot.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        saved_search_id: { type: 'string', description: 'Saved search externalId. Omit to check every loaded saved search.' },
+        limit:           { type: 'number', description: 'Number of saved searches to load (default 100)' },
+      },
+    },
+  },
 ];
 
 type Args = Record<string, unknown>;
@@ -188,7 +201,10 @@ function filterToLocation(response: SearchResponse, location: GeocodedLocation):
   return response.results ? { ...response, results: filtered } : { ...response, homes: filtered };
 }
 
-function searchBody(args: Args, location?: GeocodedLocation): Record<string, unknown> {
+function searchBody(
+  args: Args,
+  location?: { locationId: string; provider?: string },
+): Record<string, unknown> {
   const query: Record<string, unknown> = {
     guests: {
       adults: (args['adults'] as number | undefined) ?? (args['guests'] as number | undefined) ?? 2,
@@ -200,11 +216,263 @@ function searchBody(args: Args, location?: GeocodedLocation): Record<string, unk
   }
   if (location) {
     query['locationId'] = location.locationId;
-    query['provider'] = location.provider;
+    if (location.provider) query['provider'] = location.provider;
   }
   if (args['exchange_type']) query['exchangeTypes'] = [args['exchange_type']];
   if (args['home_type']) query['homeTypes'] = [args['home_type']];
   return { search_query: query };
+}
+
+const SAVED_SEARCH_SNAPSHOT = 'saved-search-alerts.json';
+const BLOCKED_SNAPSHOT_FILENAMES = new Set(['session.json', '.env']);
+
+interface SavedSearch {
+  externalId?: string;
+  displayInformation?: { title?: string };
+  searchCriteria?: {
+    calendar?: { dateRanges?: { from?: string; to?: string }[] };
+    location?: { locationId?: string; provider?: string };
+    guestCriteria?: { guests?: { adults?: number; children?: number | null } };
+  };
+}
+
+interface AlertSnapshot {
+  searches: Record<string, { homeIds: string[] }>;
+}
+
+interface SavedSearchAlertResult {
+  savedSearchId: string;
+  title?: string;
+  baseline: boolean;
+  skipped: boolean;
+  reason?: string;
+  homeIds: string[];
+  newHomeIds: string[];
+}
+
+export function savedSearchSnapshotPath(): string {
+  const override = process.env['HOMEEXCHANGE_SAVED_SEARCH_SNAPSHOT'];
+  const filePath = override
+    ? path.resolve(override)
+    : path.resolve(__dirname, '../..', SAVED_SEARCH_SNAPSHOT);
+  const filename = path.basename(filePath);
+  if (BLOCKED_SNAPSHOT_FILENAMES.has(filename) || filename.startsWith('.env')) {
+    throw new Error('Refusing to store saved-search snapshots in session or environment files.');
+  }
+  return filePath;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function textValue(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() !== '' ? value : undefined;
+}
+
+function savedSearchesFrom(response: unknown): SavedSearch[] | undefined {
+  if (!isRecord(response) || !Array.isArray(response['data'])) return undefined;
+  return response['data'].filter(isRecord) as SavedSearch[];
+}
+
+function alertSearchBody(search: SavedSearch): Record<string, unknown> | undefined {
+  const locationId = textValue(search.searchCriteria?.location?.locationId);
+  if (!locationId) return undefined;
+
+  const provider = textValue(search.searchCriteria?.location?.provider);
+  const range = search.searchCriteria?.calendar?.dateRanges?.[0];
+  const guests = search.searchCriteria?.guestCriteria?.guests;
+  const args: Args = {
+    children: typeof guests?.children === 'number' ? guests.children : 0,
+  };
+  if (typeof guests?.adults === 'number') args['adults'] = guests.adults;
+
+  const from = textValue(range?.from);
+  const to = textValue(range?.to);
+  if (from && to) {
+    args['checkin'] = from;
+    args['checkout'] = to;
+  }
+
+  // flexibleSearch, isLuxury, babies, and queryParams are not sent.
+  return searchBody(args, { locationId, ...(provider ? { provider } : {}) });
+}
+
+function scalarId(value: unknown): string | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return textValue(value);
+}
+
+function homeIdentifier(home: SearchHome): string | undefined {
+  return scalarId(home['id']) ?? scalarId(home['homeId']);
+}
+
+function homeIdsFrom(response: SearchResponse): string[] {
+  let homes: SearchHome[] = [];
+  if (Array.isArray(response.results)) homes = response.results;
+  else if (Array.isArray(response.homes)) homes = response.homes;
+
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const home of homes) {
+    const id = homeIdentifier(home);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
+function readSnapshot(filePath: string): AlertSnapshot {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(filePath, 'utf8');
+  } catch {
+    return { searches: {} };
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed) || !isRecord(parsed['searches'])) return { searches: {} };
+
+    const searches: AlertSnapshot['searches'] = {};
+    for (const [id, entry] of Object.entries(parsed['searches'])) {
+      if (!isRecord(entry) || !Array.isArray(entry['homeIds'])) continue;
+      const homeIds = entry['homeIds'];
+      if (!homeIds.every((homeId): homeId is string => typeof homeId === 'string')) continue;
+      searches[id] = { homeIds };
+    }
+    return { searches };
+  } catch {
+    return { searches: {} };
+  }
+}
+
+function writeSnapshot(filePath: string, snapshot: AlertSnapshot): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const temporary = `${filePath}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  try {
+    fs.renameSync(temporary, filePath);
+  } catch (error) {
+    fs.rmSync(temporary, { force: true });
+    throw error;
+  }
+}
+
+function alertResult(
+  savedSearchId: string,
+  title: string | undefined,
+  outcome: {
+    baseline: boolean;
+    skipped: boolean;
+    reason?: string;
+    homeIds?: string[];
+    newHomeIds?: string[];
+  },
+): SavedSearchAlertResult {
+  const result: SavedSearchAlertResult = {
+    savedSearchId,
+    baseline: outcome.baseline,
+    skipped: outcome.skipped,
+    homeIds: outcome.homeIds ?? [],
+    newHomeIds: outcome.newHomeIds ?? [],
+  };
+  if (title) result.title = title;
+  if (outcome.reason) result.reason = outcome.reason;
+  return result;
+}
+
+async function compareSavedSearch(
+  search: SavedSearch,
+  snapshot: AlertSnapshot,
+): Promise<{ changed: boolean; result: SavedSearchAlertResult }> {
+  const title = textValue(search.displayInformation?.title);
+  const savedSearchId = textValue(search.externalId);
+  if (!savedSearchId) {
+    return {
+      changed: false,
+      result: alertResult('', title, {
+        baseline: false,
+        skipped: true,
+        reason: 'This saved search has no externalId, so it was not re-run.',
+      }),
+    };
+  }
+
+  const body = alertSearchBody(search);
+  if (!body) {
+    return {
+      changed: false,
+      result: alertResult(savedSearchId, title, {
+        baseline: false,
+        skipped: true,
+        reason: 'This saved search has no locationId, so it was not re-run.',
+      }),
+    };
+  }
+
+  const response = await api.bffPost<SearchResponse>('/search/homes', body, {
+    limit: '20',
+    offset: '0',
+  }, SEARCH_HEADERS);
+  const homeIds = homeIdsFrom(response);
+  const previous = snapshot.searches[savedSearchId]?.homeIds;
+  const baseline = previous === undefined;
+  const seen = new Set(previous ?? []);
+  snapshot.searches[savedSearchId] = { homeIds };
+  return {
+    changed: true,
+    result: alertResult(savedSearchId, title, {
+      baseline,
+      skipped: false,
+      homeIds,
+      newHomeIds: baseline ? [] : homeIds.filter((id) => !seen.has(id)),
+    }),
+  };
+}
+
+async function checkSavedSearchAlerts(args: Args): Promise<{ results: SavedSearchAlertResult[] }> {
+  const filePath = savedSearchSnapshotPath();
+  const limit = (args['limit'] as number | undefined) ?? 100;
+  const requestedId = textValue(args['saved_search_id']);
+  const loaded = savedSearchesFrom(await handleSearch('list_saved_searches', { limit }));
+
+  if (!loaded) {
+    return {
+      results: [alertResult('', undefined, {
+        baseline: false,
+        skipped: true,
+        reason: 'Saved searches response did not include a data array.',
+      })],
+    };
+  }
+
+  const selected = requestedId
+    ? loaded.filter((search) => search.externalId === requestedId)
+    : loaded;
+  if (requestedId && selected.length === 0) {
+    return {
+      results: [alertResult(requestedId, undefined, {
+        baseline: false,
+        skipped: true,
+        reason: 'No saved search matched that id.',
+      })],
+    };
+  }
+
+  const snapshot = readSnapshot(filePath);
+  const results: SavedSearchAlertResult[] = [];
+  let changed = false;
+  for (const search of selected) {
+    const compared = await compareSavedSearch(search, snapshot);
+    changed = changed || compared.changed;
+    results.push(compared.result);
+  }
+  if (changed) writeSnapshot(filePath, snapshot);
+  return { results };
 }
 
 export async function handleSearch(name: string, args: Args): Promise<unknown> {
@@ -253,6 +521,9 @@ export async function handleSearch(name: string, args: Args): Promise<unknown> {
       const limit = (args['limit'] as number | undefined) ?? 100;
       return api.bff('/search/saved-searches', { limit: String(limit) });
     }
+
+    case 'check_saved_search_alerts':
+      return checkSavedSearchAlerts(args);
 
     default:
       throw new Error(`Unknown search tool: ${name}`);
