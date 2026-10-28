@@ -1,5 +1,5 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { api } from '../api';
 
 const searchArgsSchema = z.object({

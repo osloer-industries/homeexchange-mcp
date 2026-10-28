@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { z } from 'zod/v3';
+import { z } from 'zod';
 
 export interface HarEntry {
   request: {

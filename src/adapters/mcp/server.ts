@@ -1,6 +1,6 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -16,7 +16,7 @@ const SEARCH_NAMES = new Set(searchTools.map((t) => t.name));
 const MESSAGING_NAMES = new Set(messagingTools.map((t) => t.name));
 const USER_NAMES = new Set(userTools.map((t) => t.name));
 
-const argsSchema = z.record(z.unknown());
+const argsSchema = z.record(z.string(), z.unknown());
 
 export function listTools() {
   return { tools: allTools };

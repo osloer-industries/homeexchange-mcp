@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { type HomeExchangeClient } from '../../application/ports/homeexchange-client';
 import { HOMEEXCHANGE_API_ORIGINS } from '../../domain/homeexchange-origins';
 import { isHomeExchangeApiUrl, isHomeExchangeHostname } from '../../security';

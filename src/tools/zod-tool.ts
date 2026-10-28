@@ -1,9 +1,8 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
-import { type ZodObject, type ZodRawShape } from 'zod/v3';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { type ZodObject, type ZodRawShape } from 'zod';
 
 export function zodTool<T extends ZodRawShape>(name: string, description: string, schema: ZodObject<T>): Tool {
-  const inputSchema = zodToJsonSchema(schema, { $refStrategy: 'none' });
+  const inputSchema = schema.toJSONSchema({ target: 'draft-07' });
   if (!isMcpInputSchema(inputSchema)) throw new Error('MCP tool schemas must be objects');
   return { name, description, inputSchema };
 }

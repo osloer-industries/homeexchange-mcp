@@ -25,7 +25,7 @@ describe('search tools', () => {
   });
 
   it('rejects a missing required home ID before calling the API', async () => {
-    await expect(handleSearch('get_home', {})).rejects.toThrow('Required');
+    await expect(handleSearch('get_home', {})).rejects.toThrow('expected string');
     expect(apiMock.bff).not.toHaveBeenCalled();
   });
 
