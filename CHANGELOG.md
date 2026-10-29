@@ -2,6 +2,14 @@
 
 All notable changes to homeexchange-mcp are documented here.
 
+## [0.1.2](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.1...v0.1.2) (2026-10-29)
+
+
+### Bug Fixes
+
+* **api:** raise SessionExpiredError on 401 ([#77](https://github.com/osloer-industries/homeexchange-mcp/issues/77)) ([1a06d5a](https://github.com/osloer-industries/homeexchange-mcp/commit/1a06d5a00728fbcf91d37dc695a30da0300b3433))
+* **deps:** resolve Dependabot security pins for mocker, fast-uri, ip-address ([#84](https://github.com/osloer-industries/homeexchange-mcp/issues/84)) ([ec22dde](https://github.com/osloer-industries/homeexchange-mcp/commit/ec22ddec31f1363fefdf7f3aef19d788ebd4afbd))
+
 ## [0.1.1](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.0...v0.1.1) (2026-08-29)
 
 
