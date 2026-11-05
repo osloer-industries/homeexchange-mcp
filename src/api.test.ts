@@ -49,7 +49,8 @@ describe('api client', () => {
     await api.bff('/v3/conversations/me');
     await api.bffPost('/v3/conversations', { message: 'hello' }, { locale: 'en' }, { 'X-Test': 'yes' });
 
-    expect((fetchMock.mock.calls[0]?.[0] as URL).origin).toBe('https://bff.homeexchange.com');
+    const [firstUrl] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(firstUrl.origin).toBe('https://bff.homeexchange.com');
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
       method: 'POST',
       body: JSON.stringify({ message: 'hello' }),
