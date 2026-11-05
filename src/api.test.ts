@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { api } from './api';
+import { api, SessionExpiredError } from './api';
 
 const { fetchMock } = vi.hoisted(() => ({
   fetchMock: vi.fn(),
@@ -84,7 +84,12 @@ describe('api client', () => {
   it('reports an expired session without exposing the response body', async () => {
     fetchMock.mockResolvedValueOnce(response('private response', 401));
 
-    await expect(api.get('/v1/users/123')).rejects.toThrow('Session expired');
+    const error: unknown = await api.get('/v1/users/123').catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(SessionExpiredError);
+    expect(error).toMatchObject({
+      name: 'SessionExpiredError',
+      message: 'Session expired. Run: npm run login',
+    });
   });
 
   it('limits error response details', async () => {

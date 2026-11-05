@@ -4,6 +4,13 @@ import { isHomeExchangeApiUrl, isHomeExchangeHostname } from './security';
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
 
+export class SessionExpiredError extends Error {
+  constructor() {
+    super('Session expired. Run: npm run login');
+    this.name = 'SessionExpiredError';
+  }
+}
+
 interface Session {
   token: string | null;
   cookies: { name: string; value: string; domain: string }[];
@@ -66,7 +73,7 @@ async function request<T>(url: URL, init: RequestInit = {}): Promise<T> {
   });
 
   if (res.status === 401) {
-    throw new Error('Session expired. Run: npm run login');
+    throw new SessionExpiredError();
   }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
