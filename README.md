@@ -27,12 +27,13 @@ Once connected, ask your AI client things like:
 - *"Send a message to conversation 12345 asking about parking"*
 - *"What homes have I favourited?"*
 - *"Show the availability calendar for home 1950607"*
+- *"Any new homes matching my saved searches?"*
 
-**20 tools across three categories:**
+**21 tools across three categories:**
 
 | Category | Tools |
 |----------|-------|
-| 🔍 **Search & discovery** | `search_homes` · `get_home` · `get_home_calendar` · `get_recommendations` · `list_my_homes` · `list_favorites` · `add_favorite` · `remove_favorite` · `list_saved_searches` |
+| 🔍 **Search & discovery** | `search_homes` · `get_home` · `get_home_calendar` · `get_recommendations` · `list_my_homes` · `list_favorites` · `add_favorite` · `remove_favorite` · `list_saved_searches` · `check_saved_search_alerts` |
 | 💬 **Messaging** | `list_conversations` · `get_conversation` · `get_messages` · `get_exchange_request` · `send_message` · `start_conversation` · `pre_approve_exchange` · `archive_conversation` |
 | 👤 **Users** | `get_user_profile` · `get_user_ratings` · `get_user_achievements` |
 
@@ -55,7 +56,7 @@ Once connected, ask your AI client things like:
   │                 │                 │
   search &       messaging          users
   discovery      (8 tools)        (3 tools)
-  (9 tools)          │                │
+  (10 tools)         │                │
        │             └────────┬───────┘
        └────────────────┘
                  │
@@ -121,7 +122,7 @@ npm run test:mcp -- --live
 ```
 
 The live check calls `list_my_homes`. Do not use it for testing changes that
-write data, and never commit `session.json` or `.env`.
+write data, and never commit `session.json`, `.env`, or `saved-search-alerts.json`.
 
 ---
 
@@ -253,6 +254,16 @@ Your saved search filters.
 |-----------|------|----------|---------|-------------|
 | `limit` | number | No | `100` | Number of results |
 
+#### `check_saved_search_alerts`
+Re-run saved searches and compare matching home ids with the local snapshot `saved-search-alerts.json` (gitignored). The first run stores the current ids as a baseline. Later runs report ids that were not in the previous snapshot, then replace the snapshot with the current ids.
+
+Each selected search is posted to `/search/homes` with the same body and headers as `search_homes`: `locationId`, `provider`, the first date range, and adult/child guest counts. The first 20 results are compared. Flexible dates, luxury filters, babies, and the raw query string are not sent. A saved search without a `locationId` is skipped and named in the result.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `saved_search_id` | string | No | — | Saved search `externalId`. Omit to check every loaded saved search. |
+| `limit` | number | No | `100` | Number of saved searches to load |
+
 ---
 
 ### 💬 Messaging
@@ -367,7 +378,7 @@ src/
   api.ts            authenticated HTTP client
   mcp.ts            MCP stdio server
   tools/
-    search.ts       9 search & discovery tools
+    search.ts       10 search & discovery tools
     messaging.ts    8 messaging tools
     user.ts         3 user tools
 ```

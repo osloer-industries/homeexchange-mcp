@@ -15,6 +15,7 @@ const expectedTools = new Set([
   'add_favorite',
   'remove_favorite',
   'list_saved_searches',
+  'check_saved_search_alerts',
   'list_conversations',
   'get_conversation',
   'send_message',
@@ -133,7 +134,7 @@ try {
     if (result.isError) throw new Error('The read-only account check was rejected.');
     console.log('Local MCP protocol check and read-only account check passed.');
   } else {
-    console.log('Local MCP protocol check passed. All 20 tools are available.');
+    console.log(`Local MCP protocol check passed. All ${expectedTools.size} tools are available.`);
   }
   stop(0);
 } catch (error) {
