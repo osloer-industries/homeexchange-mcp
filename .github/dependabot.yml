@@ -28,3 +28,10 @@ updates:
       - dependencies
     commit-message:
       prefix: "ci(deps)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
