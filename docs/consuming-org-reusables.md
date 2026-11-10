@@ -13,7 +13,7 @@ on that repository.
 | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (`workflow-security` job) | `workflow-security.yml` | actionlint + zizmor; **job**-level `actions: read` (workflow-level `actions: read` is omitted per Sonar `githubactions:S8264`); default empty `min-severity` / `min-confidence`. |
 | [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) | `codeql-javascript-typescript.yml` | Public repository: default Code Scanning upload (`code-scanning-upload: true`). |
 
-Repo-specific jobs that stay inlined: CI quality (typecheck, lint, audit, SonarCloud), dependency review, pull request title, and Release Please.
+Repo-specific jobs that stay inlined: CI quality (typecheck, lint, audit, SonarCloud), dependency review, pull request title (`pull_request`, not `pull_request_target`), and Release Please.
 
 Dependabot `github-actions` updates on `/` bump Action SHAs and org reusable workflow SHAs together (`ci(deps)`).
 

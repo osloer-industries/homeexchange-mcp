@@ -6,6 +6,8 @@ updates:
       interval: weekly
       day: monday
       time: "04:00"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       development-dependencies:
@@ -25,6 +27,8 @@ updates:
       interval: weekly
       day: monday
       time: "04:00"
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
     commit-message:
