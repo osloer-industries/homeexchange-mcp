@@ -29,6 +29,12 @@ Read-only tools may be used for validation, but return only the minimum
 necessary summary. Redact names, addresses, message contents, booking dates,
 and identifiers unless the user specifically needs them.
 
+### Toolchain
+
+Use the Node.js 24 version in `.nvmrc` / `.node-version` (`engines.node` is
+`>=24 <25`). Install with `npm ci` and run `npm run check` before opening a
+pull request.
+
 ### Local MCP validation
 
 Use `npm run test:mcp` to verify the built server through its real local stdio
