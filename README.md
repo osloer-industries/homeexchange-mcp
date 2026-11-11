@@ -138,7 +138,7 @@ Works with any MCP client that supports stdio transport.
   "mcpServers": {
     "homeexchange": {
       "command": "npx",
-      "args": ["ts-node", "src/mcp.ts"],
+      "args": ["tsx", "src/mcp.ts"],
       "cwd": "/path/to/homeexchange-mcp"
     }
   }
@@ -148,7 +148,7 @@ Works with any MCP client that supports stdio transport.
 ### Claude Code
 
 ```bash
-claude mcp add homeexchange -- npx ts-node src/mcp.ts
+claude mcp add homeexchange -- npx tsx src/mcp.ts
 ```
 
 ### Cursor
@@ -160,7 +160,7 @@ claude mcp add homeexchange -- npx ts-node src/mcp.ts
   "mcpServers": {
     "homeexchange": {
       "command": "npx",
-      "args": ["ts-node", "src/mcp.ts"],
+      "args": ["tsx", "src/mcp.ts"],
       "cwd": "/path/to/homeexchange-mcp"
     }
   }
@@ -175,7 +175,7 @@ claude mcp add homeexchange -- npx ts-node src/mcp.ts
 {
   "context_servers": {
     "homeexchange": {
-      "command": { "path": "npx", "args": ["ts-node", "src/mcp.ts"] }
+      "command": { "path": "npx", "args": ["tsx", "src/mcp.ts"] }
     }
   }
 }
