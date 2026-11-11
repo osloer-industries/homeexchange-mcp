@@ -81,21 +81,20 @@ describe('MCP server', () => {
 
   it('connects the server to its transport', async () => {
     const server = createServer();
-    const connect = vi.spyOn(server, 'connect').mockResolvedValue();
     const write = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const transport = {} as Parameters<typeof main>[1];
+    const connect = vi.fn<(transport: Parameters<Server['connect']>[0]) => Promise<void>>().mockResolvedValue(undefined);
 
-    await main(server, transport);
+    await main(server, connect);
 
-    expect(connect).toHaveBeenCalledWith(transport);
+    expect(connect).toHaveBeenCalledOnce();
     expect(write).toHaveBeenCalledWith('HomeExchange MCP server running (stdio)\n');
   });
 
   it('reports fatal startup errors and exits', () => {
     const write = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const exit = vi.spyOn(process, 'exit').mockImplementation((() => {
+    const exit = vi.spyOn(process, 'exit').mockImplementation((): never => {
       throw new Error('process exited');
-    }) as typeof process.exit);
+    });
 
     expect(() => reportFatal(new Error('broken'))).toThrow('process exited');
 
