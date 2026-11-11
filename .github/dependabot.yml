@@ -6,6 +6,8 @@ updates:
       interval: weekly
       day: monday
       time: "04:00"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       development-dependencies:
@@ -18,13 +20,23 @@ updates:
     commit-message:
       prefix: "chore(deps)"
 
+  # Also updates `uses: osloer-industries/.github/.github/workflows/...@<sha>` reusable workflow refs.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
       time: "04:00"
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
     commit-message:
       prefix: "ci(deps)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
