@@ -1,54 +1,76 @@
 import { chromium, type Browser, type BrowserContext } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
-import { isHomeExchangeApiUrl } from './security';
+import { isHomeExchangeApiUrl, userIdFromPathname } from './security';
 
-const sessionPath = path.resolve(__dirname, '../session.json');
+export const SESSION_FILE_PATH = path.resolve(__dirname, '../session.json');
 
-let browser: Browser | null = null;
-let ctx: BrowserContext | null = null;
-let userId: string | null = null;
-const capturedHeaders: Record<string, string> = {};
+export interface RecordState {
+  browser: Browser | null;
+  ctx: BrowserContext | null;
+  userId: string | null;
+  capturedHeaders: Record<string, string>;
+}
 
-process.on('SIGINT', () => { void saveAndExit(); });
-process.on('SIGTERM', () => { void saveAndExit(); });
+export const recordState: RecordState = {
+  browser: null,
+  ctx: null,
+  userId: null,
+  capturedHeaders: {},
+};
 
-async function saveAndExit() {
-  const cookies = ctx ? await ctx.cookies() : [];
-  const session = { cookies, headers: capturedHeaders, userId };
-  fs.writeFileSync(sessionPath, JSON.stringify(session, null, 2));
+function reportRecordError(err: unknown): void {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+}
+
+function onRecordSignal(): void {
+  void saveAndExit().catch(reportRecordError);
+}
+
+process.on('SIGINT', onRecordSignal);
+process.on('SIGTERM', onRecordSignal);
+
+export async function saveAndExit(state: RecordState = recordState): Promise<void> {
+  const cookies = state.ctx ? await state.ctx.cookies() : [];
+  const session = {
+    cookies,
+    headers: state.capturedHeaders,
+    userId: state.userId,
+  };
+  fs.writeFileSync(SESSION_FILE_PATH, JSON.stringify(session, null, 2));
   console.log(`\n✅ Session saved to session.json`);
   console.log(`   Cookies: ${cookies.length}`);
-  console.log(`   Headers: ${Object.keys(capturedHeaders).join(', ') || 'none'}`);
-  console.log(`   User ID: ${userId}`);
+  console.log(`   Headers: ${Object.keys(state.capturedHeaders).join(', ') || 'none'}`);
+  console.log(`   User ID: ${state.userId}`);
   console.log('   Run: npm run analyze\n');
-  browser?.close().finally(() => process.exit(0));
+  if (state.browser) {
+    await state.browser.close();
+  }
+  process.exit(0);
 }
 
 async function record() {
-  browser = await chromium.launch({ headless: false });
-  ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const page = await ctx.newPage();
+  recordState.browser = await chromium.launch({ headless: false });
+  recordState.ctx = await recordState.browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await recordState.ctx.newPage();
 
   page.on('request', (req) => {
     const url = new URL(req.url());
     const isApi = isHomeExchangeApiUrl(url);
 
     if (isApi) {
-      // Capture any interesting auth headers
       const headers = req.headers();
       for (const key of ['authorization', 'x-auth-token', 'x-access-token', 'x-api-key']) {
         const val = headers[key];
         if (val && val !== 'Bearer undefined') {
-          capturedHeaders[key] = val;
+          recordState.capturedHeaders[key] = val;
           console.log(`\n🔑 Header captured: ${key}`);
         }
       }
 
-      // Extract user ID from URLs like /users/3778496
-      if (!userId) {
-        const match = /\/(?:users|members)\/(\d+)/.exec(url.pathname);
-        if (match) userId = match[1] ?? null;
+      if (!recordState.userId) {
+        recordState.userId = userIdFromPathname(url.pathname);
       }
 
       console.log(`→ ${req.method()} ${url.toString()}`);
@@ -72,10 +94,12 @@ async function record() {
   console.log('\nPress Ctrl+C when done.\n');
 
   await new Promise<void>((resolve) => {
-    browser!.on('disconnected', () => resolve());
+    recordState.browser!.on('disconnected', () => resolve());
   });
 
-  saveAndExit();
+  await saveAndExit();
 }
 
-record().catch(console.error);
+if (process.argv[1] === __filename) {
+  record().catch(reportRecordError);
+}
