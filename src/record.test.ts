@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { saveAndExit, type RecordState } from './record';
+import { saveAndExit, SESSION_FILE_PATH, type RecordState } from './record';
 
 const writeFileSync = vi.hoisted(() => vi.fn());
 
@@ -24,14 +24,13 @@ describe('saveAndExit', () => {
       ctx: { cookies } as unknown as RecordState['ctx'],
       userId: '42',
       capturedHeaders: { authorization: 'Bearer test' },
-      sessionPath: '/tmp/session.json',
     };
 
     await expect(saveAndExit(state)).rejects.toThrow('exit:0');
     expect(close).toHaveBeenCalledOnce();
     expect(cookies).toHaveBeenCalledOnce();
     expect(writeFileSync).toHaveBeenCalledWith(
-      '/tmp/session.json',
+      SESSION_FILE_PATH,
       JSON.stringify(
         {
           cookies: [{ name: 'sid', value: '1', domain: '.homeexchange.com' }],

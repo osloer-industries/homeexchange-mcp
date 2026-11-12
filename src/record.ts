@@ -3,12 +3,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { isHomeExchangeApiUrl, userIdFromPathname } from './security';
 
+export const SESSION_FILE_PATH = path.resolve(__dirname, '../session.json');
+
 export interface RecordState {
   browser: Browser | null;
   ctx: BrowserContext | null;
   userId: string | null;
   capturedHeaders: Record<string, string>;
-  sessionPath: string;
 }
 
 export const recordState: RecordState = {
@@ -16,7 +17,6 @@ export const recordState: RecordState = {
   ctx: null,
   userId: null,
   capturedHeaders: {},
-  sessionPath: path.resolve(__dirname, '../session.json'),
 };
 
 function reportRecordError(err: unknown): void {
@@ -38,7 +38,7 @@ export async function saveAndExit(state: RecordState = recordState): Promise<voi
     headers: state.capturedHeaders,
     userId: state.userId,
   };
-  fs.writeFileSync(state.sessionPath, JSON.stringify(session, null, 2));
+  fs.writeFileSync(SESSION_FILE_PATH, JSON.stringify(session, null, 2));
   console.log(`\n✅ Session saved to session.json`);
   console.log(`   Cookies: ${cookies.length}`);
   console.log(`   Headers: ${Object.keys(state.capturedHeaders).join(', ') || 'none'}`);
