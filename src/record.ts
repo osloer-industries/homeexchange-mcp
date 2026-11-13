@@ -1,6 +1,6 @@
 import { chromium, type Browser, type BrowserContext } from 'playwright';
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { isHomeExchangeApiUrl, userIdFromPathname } from './security';
 
 export const SESSION_FILE_PATH = path.resolve(__dirname, '../session.json');

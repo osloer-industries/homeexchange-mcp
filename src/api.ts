@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { isHomeExchangeApiUrl, isHomeExchangeHostname } from './security';
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
@@ -51,15 +51,19 @@ function baseHeaders(): Record<string, string> {
   };
 }
 
+function headerEntries(override: NonNullable<RequestInit['headers']>): [string, string][] {
+  if (override instanceof Headers) {
+    return [...override.entries()];
+  }
+  if (Array.isArray(override)) {
+    return override;
+  }
+  return Object.entries(override) as [string, string][];
+}
+
 function mergeHeaders(base: Record<string, string>, override?: RequestInit['headers']): Record<string, string> {
   if (!override) return base;
-  const entries =
-    override instanceof Headers
-      ? [...override.entries()]
-      : Array.isArray(override)
-        ? override
-        : Object.entries(override);
-  return { ...base, ...(Object.fromEntries(entries) as Record<string, string>) };
+  return { ...base, ...(Object.fromEntries(headerEntries(override)) as Record<string, string>) };
 }
 
 function buildUrl(origin: string, endpoint: string, params?: Record<string, string>): URL {
