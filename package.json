@@ -2,6 +2,9 @@
   "name": "homeexchange-mcp",
   "version": "0.1.3",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "record": "ts-node src/record.ts",
@@ -21,7 +24,7 @@
   "description": "Unofficial local MCP server for HomeExchange",
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@types/node": "25.4.0",
+    "@types/node": "24.19.2",
     "@typescript-eslint/eslint-plugin": "8.72.1",
     "@typescript-eslint/parser": "8.72.1",
     "@vitest/coverage-v8": "4.1.12",
