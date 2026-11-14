@@ -1,4 +1,4 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const toolMocks = vi.hoisted(() => ({
@@ -76,7 +76,7 @@ describe('MCP server', () => {
   });
 
   it('creates an MCP server with registered handlers', () => {
-    expect(createServer()).toBeInstanceOf(Server);
+    expect(createServer()).toBeInstanceOf(McpServer);
   });
 
   it('connects the server to its transport', async () => {

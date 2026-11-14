@@ -1,5 +1,26 @@
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 
+export function emptyInputTool(name: string, description: string): Tool {
+  return {
+    name,
+    description,
+    inputSchema: { type: 'object', properties: {} },
+  };
+}
+
+export function optionalLimitTool(name: string, description: string, limitDescription: string): Tool {
+  return {
+    name,
+    description,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: limitDescription },
+      },
+    },
+  };
+}
+
 export function requiredStringTool(
   name: string,
   description: string,
