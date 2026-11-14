@@ -3,6 +3,8 @@ node_modules/
 dist/
 coverage/
 session.json
+saved-search-alerts.json
+saved-search-alerts.json.*.tmp
 *.har
 api-map.json
 .worktrees/
