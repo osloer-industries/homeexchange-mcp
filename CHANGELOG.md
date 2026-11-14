@@ -2,6 +2,13 @@
 
 All notable changes to homeexchange-mcp are documented here.
 
+## [0.1.4](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.3...v0.1.4) (2026-11-14)
+
+
+### Bug Fixes
+
+* **deps:** patch hono stack blocked by npm overrides ([3d1e3dc](https://github.com/osloer-industries/homeexchange-mcp/commit/3d1e3dc2b9118f915161fc89982df80ad0e805d2))
+
 ## [0.1.3](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.2...v0.1.3) (2026-11-12)
 
 
