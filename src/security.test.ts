@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isHomeExchangeApiUrl, isHomeExchangeHostname } from './security';
+import { isHomeExchangeApiUrl, isHomeExchangeHostname, userIdFromPathname } from './security';
 
 describe('isHomeExchangeHostname', () => {
   it.each([
@@ -17,6 +17,16 @@ describe('isHomeExchangeHostname', () => {
     'example.org',
   ])('rejects untrusted hostname %s', (hostname) => {
     expect(isHomeExchangeHostname(hostname)).toBe(false);
+  });
+});
+
+describe('userIdFromPathname', () => {
+  it.each([
+    ['/users/3778496/profile', '3778496'],
+    ['/members/42', '42'],
+    ['/v1/homes/99', null],
+  ])('extracts user id from %s', (pathname, expected) => {
+    expect(userIdFromPathname(pathname)).toBe(expected);
   });
 });
 

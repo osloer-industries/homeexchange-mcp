@@ -11,3 +11,9 @@ export function isHomeExchangeHostname(hostname: string): boolean {
 export function isHomeExchangeApiUrl(url: URL): boolean {
   return url.protocol === 'https:' && API_HOSTNAMES.has(url.hostname.toLowerCase());
 }
+
+const USER_OR_MEMBER_PATH = /\/(?:users|members)\/(\d+)/;
+
+export function userIdFromPathname(pathname: string): string | null {
+  return USER_OR_MEMBER_PATH.exec(pathname)?.[1] ?? null;
+}

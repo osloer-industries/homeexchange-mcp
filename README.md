@@ -396,7 +396,9 @@ Ideas, bug reports, and pull requests are welcome.
 1. Fork the repo and create a branch from `main`
 2. Make your changes — keep commits [conventional](https://www.conventionalcommits.org/) (`fix:`, `feat:`, `chore:` etc.)
 3. Open a pull request with a conventional title, such as `feat: add calendar filtering` or `fix(api): handle expired sessions`
-4. Ensure all required checks pass before merge
+4. Ensure all required checks pass before merge (`npm run check` locally mirrors the CI quality job)
+
+GitHub runs additional gates: org **workflow-security** (actionlint + zizmor), **CodeQL**, dependency review, and semantic PR title validation. See [docs/consuming-org-reusables.md](docs/consuming-org-reusables.md) for how org reusables are pinned and which check names apply when configuring branch protection.
 
 **Good first issues** are tagged [`good first issue`](https://github.com/osloer-industries/homeexchange-mcp/labels/good%20first%20issue) — start there if you're new to the codebase.
 
