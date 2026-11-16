@@ -64,7 +64,7 @@ These rules apply to every agent (Cursor, Grok Bot, any other) working in this r
 
 Quality gates run on GitHub Actions. Shared security and CodeQL steps call pinned
 [org reusable workflows](docs/consuming-org-reusables.md) at
-`osloer-industries/.github` (SHA pinned in each caller; bump via Dependabot `ci(deps)`).
+`osloer-industries/.github` (SHA pinned with `# v0.x.y` in each caller; bump via Dependabot `ci(deps)` / `osloer-reusables`).
 
 | Workflow | Purpose |
 | --- | --- |
