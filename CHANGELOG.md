@@ -2,6 +2,13 @@
 
 All notable changes to homeexchange-mcp are documented here.
 
+## [0.1.5](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.4...v0.1.5) (2026-11-16)
+
+
+### Documentation
+
+* align AGENTS.md with org-wide agent workflow ([#100](https://github.com/osloer-industries/homeexchange-mcp/issues/100)) ([fdf4548](https://github.com/osloer-industries/homeexchange-mcp/commit/fdf4548a53c2301541747b7bd8b15b9e26d3c2ac))
+
 ## [0.1.4](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.3...v0.1.4) (2026-11-15)
 
 
