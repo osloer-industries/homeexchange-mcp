@@ -27,7 +27,7 @@
     "@types/node": "24.19.2",
     "@typescript-eslint/eslint-plugin": "8.72.1",
     "@typescript-eslint/parser": "8.72.1",
-    "@vitest/coverage-v8": "4.1.12",
+    "@vitest/coverage-v8": "5.1.0",
     "eslint": "10.14.0",
     "ts-node": "10.9.2",
     "typescript": "5.9.3",
