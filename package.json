@@ -21,7 +21,7 @@
   "description": "Unofficial local MCP server for HomeExchange",
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@types/node": "25.4.0",
+    "@types/node": "26.6.6",
     "@typescript-eslint/eslint-plugin": "8.72.1",
     "@typescript-eslint/parser": "8.72.1",
     "@vitest/coverage-v8": "4.1.12",
