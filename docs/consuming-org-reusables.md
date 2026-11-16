@@ -19,7 +19,9 @@ Repo-specific jobs that stay inlined: CI quality (typecheck, lint, audit, SonarC
 Dependabot `github-actions` updates on `/` bump Action SHAs and org reusable workflow SHAs (`ci(deps)`). Org reusables
 are grouped separately as `osloer-reusables` (`osloer-industries/.github*`).
 
-When adding org reusables as required branch protection checks, use the names from the
+Org policy (see [AGENTS.md](../AGENTS.md)) targets a single required branch protection check: **`ci-passed`**, fed by every CI job (workflow security, CodeQL, SonarCloud zero-issues, and repo quality gates). Configure rulesets that way once the aggregate job exists in this repository.
+
+Until `ci-passed` is present, administrators may temporarily require individual check names. When adding org reusables as required branch protection checks, use the names from the
 [org workflow table](https://github.com/osloer-industries/.github/blob/d1fd7700ad30c0bafbe1d0e4b1eac1fbbb4137b3/docs/consuming-workflows.md#available-reusables).
 For `workflow-security` on `CI`, the check is typically `CI / workflow-security / Workflow security`.
 For CodeQL, the reusable job name is `Analyze JavaScript and TypeScript` (check `CodeQL / analyze / Analyze JavaScript and TypeScript`).
