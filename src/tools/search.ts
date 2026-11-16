@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { api } from '../api';
 
@@ -464,13 +464,9 @@ async function checkSavedSearchAlerts(args: Args): Promise<{ results: SavedSearc
   }
 
   const snapshot = readSnapshot(filePath);
-  const results: SavedSearchAlertResult[] = [];
-  let changed = false;
-  for (const search of selected) {
-    const compared = await compareSavedSearch(search, snapshot);
-    changed = changed || compared.changed;
-    results.push(compared.result);
-  }
+  const compared = await Promise.all(selected.map((search) => compareSavedSearch(search, snapshot)));
+  const results = compared.map((entry) => entry.result);
+  const changed = compared.some((entry) => entry.changed);
   if (changed) writeSnapshot(filePath, snapshot);
   return { results };
 }
