@@ -19,7 +19,7 @@ interface Har {
   log: { entries: HarEntry[] };
 }
 
-function extractToken(entries: HarEntry[]): string | null {
+export function extractToken(entries: HarEntry[]): string | null {
   for (const entry of entries) {
     const auth = entry.request.headers.find(
       (h) => h.name.toLowerCase() === 'authorization'
@@ -27,6 +27,13 @@ function extractToken(entries: HarEntry[]): string | null {
     if (auth) return auth.value;
   }
   return null;
+}
+
+export function compareEndpointKeys(
+  left: [string, Set<string>],
+  right: [string, Set<string>]
+): number {
+  return left[0].localeCompare(right[0]);
 }
 
 function analyze() {
@@ -67,7 +74,7 @@ function analyze() {
   }
 
   console.log(`\n📡 API endpoints captured (${endpoints.size}):\n`);
-  for (const [endpoint, statuses] of [...endpoints.entries()].sort()) {
+  for (const [endpoint, statuses] of [...endpoints.entries()].sort(compareEndpointKeys)) {
     console.log(`   ${endpoint}  [${[...statuses].join(', ')}]`);
   }
 
@@ -92,4 +99,6 @@ function analyze() {
   console.log(`\n💾 Full API map saved to api-map.json`);
 }
 
-analyze();
+if (process.argv[1] === __filename) {
+  analyze();
+}

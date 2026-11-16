@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
 import { clearInterval, clearTimeout, setInterval, setTimeout } from 'node:timers';
-import { isHomeExchangeHostname } from './security';
+import { isHomeExchangeHostname, userIdFromPathname } from './security';
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
 
@@ -77,9 +77,9 @@ async function login() {
     }
 
     if (!userId) {
-      const match = /\/(?:users|members)\/(\d+)/.exec(url.pathname);
-      if (match?.[1]) {
-        userId = match[1];
+      const captured = userIdFromPathname(url.pathname);
+      if (captured) {
+        userId = captured;
         console.log(`✅ User ID: ${userId}`);
         void scheduleAutoSave();
       }

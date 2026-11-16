@@ -2,6 +2,21 @@
 
 All notable changes to homeexchange-mcp are documented here.
 
+## [0.1.4](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.3...v0.1.4) (2026-11-15)
+
+
+### Bug Fixes
+
+* **deps:** patch hono stack blocked by npm overrides ([3d1e3dc](https://github.com/osloer-industries/homeexchange-mcp/commit/3d1e3dc2b9118f915161fc89982df80ad0e805d2))
+
+## [0.1.3](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.2...v0.1.3) (2026-11-12)
+
+
+### Bug Fixes
+
+* **record:** write session only to canonical path for CodeQL ([08e38c0](https://github.com/osloer-industries/homeexchange-mcp/commit/08e38c0c4a0593b01d18e0f833a76d251fd2fe9f))
+* resolve Sonar bugs and trim duplicated URL helpers ([a9d0f95](https://github.com/osloer-industries/homeexchange-mcp/commit/a9d0f952214b1dcfff83d7d36a2b4b12312362e0))
+
 ## [0.1.2](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.1...v0.1.2) (2026-11-04)
 
 

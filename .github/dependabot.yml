@@ -34,6 +34,9 @@ updates:
     commit-message:
       prefix: "ci(deps)"
     groups:
+      osloer-reusables:
+        patterns:
+          - "osloer-industries/.github*"
       github-actions:
         patterns:
           - "*"
