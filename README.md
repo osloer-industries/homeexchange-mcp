@@ -393,12 +393,15 @@ Ideas, bug reports, and pull requests are welcome.
 
 **Want to contribute code?**
 
+Agents and automated contributors must follow [AGENTS.md](AGENTS.md) (org-wide quality, CI, and pull request rules).
+
 1. Fork the repo and create a branch from `main`
 2. Make your changes — keep commits [conventional](https://www.conventionalcommits.org/) (`fix:`, `feat:`, `chore:` etc.)
-3. Open a pull request with a conventional title, such as `feat: add calendar filtering` or `fix(api): handle expired sessions`
-4. Ensure all required checks pass before merge (`npm run check` locally mirrors the CI quality job)
+3. Run `npm run check` locally before you push (typecheck, lint, and tests). Run pre-commit hooks when the repository provides them; never use `--no-verify`.
+4. Open a pull request with a conventional title, such as `feat: add calendar filtering` or `fix(api): handle expired sessions`, and link any issues it closes.
+5. Resolve merge conflicts by merging `main` into your branch (no force-push). A PR is ready for review when it is up to date, all checks on the current head are green, and there are no unresolved review threads or open SonarCloud issues.
 
-GitHub runs additional gates: org **workflow-security** (actionlint + zizmor), **CodeQL**, dependency review, and semantic PR title validation. See [docs/consuming-org-reusables.md](docs/consuming-org-reusables.md) for how org reusables are pinned and which check names apply when configuring branch protection.
+Branch protection should require only the aggregate **`ci-passed`** check once that job exists in this repository. Until then, individual workflow jobs still run on every PR (org **workflow-security**, **CodeQL**, dependency review, semantic PR title validation, and the CI quality job). See [docs/consuming-org-reusables.md](docs/consuming-org-reusables.md) for how org reusables are pinned and how those jobs map to GitHub check names today.
 
 **Good first issues** are tagged [`good first issue`](https://github.com/osloer-industries/homeexchange-mcp/labels/good%20first%20issue) — start there if you're new to the codebase.
 
