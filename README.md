@@ -412,7 +412,7 @@ Agents and automated contributors must follow [AGENTS.md](AGENTS.md) (org-wide q
 4. Open a pull request with a conventional title, such as `feat: add calendar filtering` or `fix(api): handle expired sessions`, and link any issues it closes.
 5. Resolve merge conflicts by merging `main` into your branch (no force-push). A PR is ready for review when it is up to date, all checks on the current head are green, and there are no unresolved review threads or open SonarCloud issues.
 
-Branch protection should require only the aggregate **`ci-passed`** check once that job exists in this repository. Until then, individual workflow jobs still run on every PR (org **workflow-security**, **CodeQL**, dependency review, semantic PR title validation, and the CI quality job). See [docs/consuming-org-reusables.md](docs/consuming-org-reusables.md) for how org reusables are pinned and how those jobs map to GitHub check names today.
+Branch protection should require only the aggregate **`ci-passed`** check on the `CI` workflow. Dependency review and semantic PR title are separate workflows and are not part of `ci-passed`. The former **Typecheck, lint & SonarCloud** job is now **Quality** plus **Analyze**. See [docs/consuming-org-reusables.md](docs/consuming-org-reusables.md) for pins and check names.
 
 **Good first issues** are tagged [`good first issue`](https://github.com/osloer-industries/homeexchange-mcp/labels/good%20first%20issue) — start there if you're new to the codebase.
 
