@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: release-please
@@ -16,12 +14,6 @@ concurrency:
 
 jobs:
   release-please:
-    name: Prepare or publish release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create or update release pull request
-        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-        with:
-          token: ${{ secrets.RELEASE_TOKEN }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+    uses: osloer-industries/.github/.github/workflows/release-please.yml@80340f8b509c4c5ecde51bff0ddb6c04e6687fdc # v0.1.4
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
