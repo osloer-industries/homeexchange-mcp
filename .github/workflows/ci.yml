@@ -37,6 +37,9 @@ jobs:
 
   sonar-analyze:
     uses: osloer-industries/.github/.github/workflows/sonarqube-cloud-node.yml@80340f8b509c4c5ecde51bff0ddb6c04e6687fdc # v0.1.4
+    permissions:
+      contents: read
+      pull-requests: read
     with:
       coverage-npm-script: test
       timeout-minutes: 20

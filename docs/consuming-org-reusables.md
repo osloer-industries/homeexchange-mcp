@@ -14,7 +14,7 @@ on that repository (**v0.1.4**: `80340f8b509c4c5ecde51bff0ddb6c04e6687fdc`).
 | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | `workflow-security.yml` | actionlint + zizmor; **job**-level `actions: read` (no workflow-level `actions: read` per Sonar `githubactions:S8264`). |
 | same | `node-npm-quality.yml` | Check name **Quality** (`npm run check`, production audit). |
 | same | `codeql-javascript-typescript.yml` | Public repo: default Code Scanning upload. Weekly schedule inherits from `CI` workflow. |
-| same | `sonarqube-cloud-node.yml` | Check name **Analyze**; `coverage-npm-script: test` (Vitest coverage). Skips when `SONAR_TOKEN` is empty (fork/Dependabot). |
+| same | `sonarqube-cloud-node.yml` | Check name **Analyze**; `coverage-npm-script: test` (Vitest coverage). Caller job needs `pull-requests: read`. Skips when `SONAR_TOKEN` is empty (fork/Dependabot). |
 | same | `sonarcloud-zero-issues.yml` | PR-only; polls SonarCloud for zero open issues at head SHA. |
 | same | `ci-passed.yml` | Aggregate required check; tolerates skipped `sonar-zero-open-issues` on non-PR events only. |
 | [`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml) | `dependency-review.yml` | Default `fail-on-severity: high`. |
