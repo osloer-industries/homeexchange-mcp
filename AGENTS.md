@@ -74,11 +74,10 @@ Quality gates run on GitHub Actions. Shared security and CodeQL steps call pinne
 
 | Workflow | Purpose |
 | --- | --- |
-| `CI` | `workflow-security` (org reusable: actionlint + zizmor) plus repo jobs for audit, `npm run check`, and SonarCloud |
-| `CodeQL` | Org reusable JavaScript/TypeScript analysis (public repo Code Scanning upload) |
-| `Dependency review` | High-severity dependency changes on pull requests |
-| `Pull request title` | Conventional Commits title validation |
-| `Release` | Release Please (uses org `RELEASE_TOKEN`) |
+| `CI` | Org reusables: workflow-security, Quality (`node-npm-quality`), CodeQL, Sonar **Analyze** + PR-only zero-open-issues, and aggregate **`ci-passed`** |
+| `Dependency review` | Org reusable; high-severity dependency changes on pull requests |
+| `Pull request title` | Org reusable semantic PR title |
+| `Release` | Org reusable Release Please (`RELEASE_TOKEN`) |
 
 Do not add workflow-level `actions: read` on `CI` (Sonar rule `githubactions:S8264`); the `workflow-security` job
 grants `actions: read` at job scope only.
