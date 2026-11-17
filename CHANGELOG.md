@@ -2,6 +2,13 @@
 
 All notable changes to homeexchange-mcp are documented here.
 
+## [0.1.6](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.5...v0.1.6) (2026-11-17)
+
+
+### Bug Fixes
+
+* clear SonarCloud smells and dedupe search tools ([#97](https://github.com/osloer-industries/homeexchange-mcp/issues/97)) ([5c71f4a](https://github.com/osloer-industries/homeexchange-mcp/commit/5c71f4a83940a8da58fa9a0156aa7f81cf96016d))
+
 ## [0.1.5](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.4...v0.1.5) (2026-11-16)
 
 
