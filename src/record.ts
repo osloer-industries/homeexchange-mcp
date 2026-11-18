@@ -8,7 +8,6 @@ export {
 } from './adapters/browser/record';
 
 import { record } from './adapters/browser/record';
+import { runAsMain } from './run-as-main';
 
-if (require.main === module) {
-  record().catch(console.error);
-}
+runAsMain(module, record);

@@ -1,6 +1,4 @@
-import { chromium } from 'playwright';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import {
   type Browser,
   type BrowserContext,
@@ -9,8 +7,8 @@ import {
   type RecordingResponse,
 } from '../../application/ports/browser';
 import { isHomeExchangeApiUrl } from '../../security';
-
-const defaultSessionPath = path.resolve(__dirname, '../session.json');
+import { getUserId } from './login';
+import { defaultSessionPath, interactiveContextInit, launchInteractiveBrowser } from './interactive-session';
 const credentialHeaders = ['authorization', 'x-auth-token', 'x-access-token', 'x-api-key'];
 
 export interface RecorderPage {
@@ -49,13 +47,13 @@ export function getResponseSummary(response: RecordingResponse): string | null {
 
 export async function record({
   createPage = createRecorderPage,
-  launchBrowser = () => chromium.launch({ headless: false }),
+  launchBrowser = launchInteractiveBrowser,
   log = console.log,
   sessionPath = defaultSessionPath,
   waitForCompletion,
 }: RecordOptions = {}): Promise<void> {
   const browser = await launchBrowser();
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext(interactiveContextInit());
   const page = await createPage(context);
   const capturedHeaders: Record<string, string> = {};
   let userId: string | null = null;
@@ -80,7 +78,7 @@ export async function record({
       const value = headers[key];
       if (value && value !== 'Bearer undefined') capturedHeaders[key] = value;
     }
-    userId ??= /\/(?:users|members)\/(\d+)/.exec(url.pathname)?.[1] ?? null;
+    userId ??= getUserId(url);
     log(`Request recorded: ${summary}`);
   });
 

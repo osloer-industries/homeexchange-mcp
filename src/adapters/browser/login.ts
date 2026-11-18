@@ -1,11 +1,8 @@
-import { chromium } from 'playwright';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import { clearInterval, clearTimeout, setInterval, setTimeout } from 'node:timers';
 import { type Browser, type LoginPage, type SessionCookie } from '../../application/ports/browser';
 import { isHomeExchangeHostname } from '../../security';
-
-const defaultSessionPath = path.resolve(__dirname, '../session.json');
+import { defaultSessionPath, interactiveContextInit, launchInteractiveBrowser } from './interactive-session';
 
 export interface LoginOptions {
   launchBrowser?: () => Promise<Browser<LoginPage, SessionCookie>>;
@@ -19,13 +16,13 @@ export function getUserId(url: URL): string | null {
 }
 
 export async function login({
-  launchBrowser = () => chromium.launch({ headless: false }),
+  launchBrowser = launchInteractiveBrowser,
   log = console.log,
   sessionPath = defaultSessionPath,
   waitForSave,
 }: LoginOptions = {}): Promise<void> {
   const browser = await launchBrowser();
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext(interactiveContextInit());
   const page = await context.newPage();
   let token: string | null = null;
   let userId: string | null = null;

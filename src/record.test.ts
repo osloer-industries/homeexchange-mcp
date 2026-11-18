@@ -1,8 +1,7 @@
 import * as fs from 'node:fs';
-import * as os from 'os';
-import * as path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { createRecorderPage, getRequestSummary, getResponseSummary, record } from './record';
+import { sessionPathIn, withTempDirectory } from './test/support/session-directory';
 
 describe('record summaries', () => {
   it('keeps API paths but drops query strings and non-API hosts', () => {
@@ -63,11 +62,10 @@ describe('record', () => {
       newContext: vi.fn<() => Promise<typeof context>>().mockResolvedValue(context),
       on: (_event: 'disconnected', listener: () => void) => { disconnected = listener; },
     };
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-record-'));
-    const sessionPath = path.join(directory, 'session.json');
     const log = vi.fn<(message: string) => void>();
 
-    try {
+    await withTempDirectory('homeexchange-record-', async (directory) => {
+      const sessionPath = sessionPathIn(directory);
       await record({
         launchBrowser: async () => browser,
         createPage: async () => page,
@@ -84,19 +82,18 @@ describe('record', () => {
       expect(log.mock.calls.flat().join(' ')).not.toContain('local-secret');
       expect(log.mock.calls.flat().join(' ')).not.toContain('member=private');
       expect(close).toHaveBeenCalledOnce();
-    } finally {
-      fs.rmSync(directory, { force: true, recursive: true });
-    }
+    });
   });
 
   it('ignores non-API traffic and does not close an already disconnected browser', async () => {
     let requestListener: ((request: { headers: () => Record<string, string>; method: () => string; url: () => string }) => void) | undefined;
     let responseListener: ((response: { request: () => { url: () => string }; status: () => number }) => void) | undefined;
+    const fireRecordedEvents = async (): Promise<void> => {
+      requestListener?.({ headers: () => ({}), method: () => 'GET', url: () => 'https://example.com/ignore' });
+      responseListener?.({ request: () => ({ url: () => 'https://example.com/ignore' }), status: () => 200 });
+    };
     const page = {
-      goto: async (): Promise<void> => {
-        requestListener?.({ headers: () => ({}), method: () => 'GET', url: () => 'https://example.com/ignore' });
-        responseListener?.({ request: () => ({ url: () => 'https://example.com/ignore' }), status: () => 200 });
-      },
+      goto: fireRecordedEvents,
       onRequest: (listener: NonNullable<typeof requestListener>): void => { requestListener = listener; },
       onResponse: (listener: NonNullable<typeof responseListener>): void => { responseListener = listener; },
     };
@@ -110,20 +107,20 @@ describe('record', () => {
       newContext: async (): Promise<typeof context> => context,
       on: (): void => undefined,
     };
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-record-'));
-    const sessionPath = path.join(directory, 'session.json');
 
-    try {
+    await withTempDirectory('homeexchange-record-', async (directory) => {
       await record({
         launchBrowser: async () => browser,
         createPage: async () => page,
-        sessionPath,
+        sessionPath: sessionPathIn(directory),
         waitForCompletion: async () => undefined,
       });
-      expect(JSON.parse(fs.readFileSync(sessionPath, 'utf8'))).toEqual({ cookies: [], headers: {}, userId: null });
+      expect(JSON.parse(fs.readFileSync(sessionPathIn(directory), 'utf8'))).toEqual({
+        cookies: [],
+        headers: {},
+        userId: null,
+      });
       expect(browser.close).not.toHaveBeenCalled();
-    } finally {
-      fs.rmSync(directory, { force: true, recursive: true });
-    }
+    });
   });
 });

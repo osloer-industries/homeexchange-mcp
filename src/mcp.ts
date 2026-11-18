@@ -8,7 +8,6 @@ export {
 } from './adapters/mcp/server';
 
 import { main, reportFatal } from './adapters/mcp/server';
+import { runAsMain } from './run-as-main';
 
-if (require.main === module) {
-  main().catch(reportFatal);
-}
+runAsMain(module, main, reportFatal);

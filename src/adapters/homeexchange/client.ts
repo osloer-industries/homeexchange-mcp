@@ -58,6 +58,16 @@ function mergeHeaders(base: Record<string, string>, override?: RequestInit['head
   return Object.fromEntries(headers.entries());
 }
 
+function endpointUrl(base: string, endpoint: string, params?: Record<string, string>): URL {
+  const url = new URL(`${base}${endpoint}`);
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+  }
+  return url;
+}
+
 async function request(url: URL, init: RequestInit = {}): Promise<unknown> {
   if (!isHomeExchangeApiUrl(url)) {
     throw new Error(`Refusing request to untrusted origin: ${url.origin}`);
@@ -82,9 +92,7 @@ async function request(url: URL, init: RequestInit = {}): Promise<unknown> {
 
 export const api: HomeExchangeClient = {
   bff(endpoint: string, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.bff}${endpoint}`);
-    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request(url);
+    return request(endpointUrl(HOMEEXCHANGE_API_ORIGINS.bff, endpoint, params));
   },
 
   bffPost(
@@ -93,9 +101,7 @@ export const api: HomeExchangeClient = {
     params?: Record<string, string>,
     headers?: Record<string, string>
   ): Promise<unknown> {
-    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.bff}${endpoint}`);
-    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request(url, {
+    return request(endpointUrl(HOMEEXCHANGE_API_ORIGINS.bff, endpoint, params), {
       method: 'POST',
       body: JSON.stringify(body),
       ...(headers ? { headers } : {}),
@@ -103,30 +109,25 @@ export const api: HomeExchangeClient = {
   },
 
   bffPatch(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.bff}${endpoint}`);
-    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     const init: RequestInit = { method: 'PATCH' };
     if (body !== undefined) {
       init.body = JSON.stringify(body);
     }
-    return request(url, init);
+    return request(endpointUrl(HOMEEXCHANGE_API_ORIGINS.bff, endpoint, params), init);
   },
 
   get(endpoint: string, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.api}${endpoint}`);
-    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request(url);
+    return request(endpointUrl(HOMEEXCHANGE_API_ORIGINS.api, endpoint, params));
   },
 
   post(endpoint: string, body: unknown, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.api}${endpoint}`);
-    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request(url, { method: 'POST', body: JSON.stringify(body) });
+    return request(endpointUrl(HOMEEXCHANGE_API_ORIGINS.api, endpoint, params), {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
   },
 
   del(endpoint: string, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`${HOMEEXCHANGE_API_ORIGINS.api}${endpoint}`);
-    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return request(url, { method: 'DELETE' });
+    return request(endpointUrl(HOMEEXCHANGE_API_ORIGINS.api, endpoint, params), { method: 'DELETE' });
   },
 };

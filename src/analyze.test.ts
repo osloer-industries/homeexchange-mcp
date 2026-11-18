@@ -1,8 +1,8 @@
 import * as fs from 'node:fs';
-import * as os from 'os';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { analyze, createApiMap, type HarEntry } from './analyze';
+import { withTempDirectory } from './test/support/session-directory';
 
 const entry = (
   method: string,
@@ -10,6 +10,13 @@ const entry = (
   status: number,
   headers: { name: string; value: string }[] = []
 ): HarEntry => ({ request: { method, url, headers }, response: { status } });
+
+function harPaths(directory: string): { input: string; output: string } {
+  return {
+    input: path.join(directory, 'input.har'),
+    output: path.join(directory, 'api-map.json'),
+  };
+}
 
 describe('createApiMap', () => {
   it('keeps only endpoint paths and status codes', () => {
@@ -41,13 +48,11 @@ describe('createApiMap', () => {
 });
 
 describe('analyze', () => {
-  it('writes a redacted endpoint map and reports its result', () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-analyze-'));
-    const input = path.join(directory, 'input.har');
-    const output = path.join(directory, 'api-map.json');
-    const messages: string[] = [];
+  it('writes a redacted endpoint map and reports its result', async () => {
+    await withTempDirectory('homeexchange-analyze-', (directory) => {
+      const { input, output } = harPaths(directory);
+      const messages: string[] = [];
 
-    try {
       fs.writeFileSync(input, JSON.stringify({
         log: { entries: [entry('GET', 'https://api.homeexchange.com/api/exchanges', 200)] },
       }));
@@ -57,36 +62,26 @@ describe('analyze', () => {
       expect(result.endpoints).toEqual([{ endpoint: 'GET /api/exchanges', statuses: ['200'] }]);
       expect(fs.readFileSync(output, 'utf8')).toContain('/api/exchanges');
       expect(messages).toContain('Safe API endpoint map saved to api-map.json');
-    } finally {
-      fs.rmSync(directory, { force: true, recursive: true });
-    }
+    });
   });
 
-  it('rejects a missing HAR file', () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-analyze-'));
-    const missing = path.join(directory, 'missing.har');
-    try {
-      expect(() => analyze(missing)).toThrow('No HAR file found');
-    } finally {
-      fs.rmSync(directory, { force: true, recursive: true });
-    }
+  it('rejects a missing HAR file', async () => {
+    await withTempDirectory('homeexchange-analyze-', (directory) => {
+      expect(() => analyze(path.join(directory, 'missing.har'))).toThrow('No HAR file found');
+    });
   });
 
-  it('reports an unauthenticated capture without disclosing its contents', () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-analyze-'));
-    const input = path.join(directory, 'input.har');
-    const output = path.join(directory, 'api-map.json');
-    const messages: string[] = [];
+  it('reports an unauthenticated capture without disclosing its contents', async () => {
+    await withTempDirectory('homeexchange-analyze-', (directory) => {
+      const { input, output } = harPaths(directory);
+      const messages: string[] = [];
 
-    try {
       fs.writeFileSync(input, JSON.stringify({
         log: { entries: [entry('GET', 'https://www.homeexchange.com/profile/1', 200)] },
       }));
       analyze(input, output, (message) => messages.push(message));
       expect(messages).toContain('No authenticated API requests found. Did you log in?');
       expect(fs.readFileSync(output, 'utf8')).not.toContain('/profile/1');
-    } finally {
-      fs.rmSync(directory, { force: true, recursive: true });
-    }
+    });
   });
 });

@@ -122,17 +122,16 @@ const geocodingFeatureSchema = z.object({
   properties: z.object({ id: z.string().optional(), source: z.string().optional() }),
 });
 const geocodingResponseSchema = z.object({ features: z.array(geocodingFeatureSchema).optional() });
+const optionalCoordinate = z.number().optional();
+const coordinateFields = {
+  lat: optionalCoordinate,
+  latitude: optionalCoordinate,
+  lng: optionalCoordinate,
+  longitude: optionalCoordinate,
+} as const;
 const searchHomeSchema = z.object({
-  lat: z.number().optional(),
-  latitude: z.number().optional(),
-  lng: z.number().optional(),
-  longitude: z.number().optional(),
-  location: z.object({
-    lat: z.number().optional(),
-    latitude: z.number().optional(),
-    lng: z.number().optional(),
-    longitude: z.number().optional(),
-  }).optional(),
+  ...coordinateFields,
+  location: z.object(coordinateFields).optional(),
 }).catchall(z.unknown());
 const searchResponseSchema = z.object({
   homes: z.array(searchHomeSchema).optional(),

@@ -1,8 +1,7 @@
 import * as fs from 'node:fs';
-import * as os from 'os';
-import * as path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { getUserId, login } from './login';
+import { sessionPathIn, withTempDirectory } from './test/support/session-directory';
 
 describe('getUserId', () => {
   it('extracts member and user identifiers only from supported paths', () => {
@@ -39,11 +38,10 @@ describe('login', () => {
       newContext: vi.fn<() => Promise<typeof context>>().mockResolvedValue(context),
       on: (_event: 'disconnected', listener: () => void) => { disconnected = listener; },
     };
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-login-'));
-    const sessionPath = path.join(directory, 'session.json');
     const log = vi.fn<(message: string) => void>();
 
-    try {
+    await withTempDirectory('homeexchange-login-', async (directory) => {
+      const sessionPath = sessionPathIn(directory);
       await login({
         launchBrowser: async () => browser,
         log,
@@ -59,9 +57,7 @@ describe('login', () => {
       expect(close).toHaveBeenCalledOnce();
       expect(log).toHaveBeenCalledWith('Session saved locally with 1 trusted HomeExchange cookies.');
       disconnected?.();
-    } finally {
-      fs.rmSync(directory, { force: true, recursive: true });
-    }
+    });
   });
 
   it('safely saves when cookie refresh fails and the browser is already closed', async () => {
@@ -85,19 +81,19 @@ describe('login', () => {
       newContext: async (): Promise<typeof context> => context,
       on: (): void => undefined,
     };
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'homeexchange-login-'));
-    const sessionPath = path.join(directory, 'session.json');
 
-    try {
+    await withTempDirectory('homeexchange-login-', async (directory) => {
       await login({
         launchBrowser: async () => browser,
         log: () => undefined,
-        sessionPath,
+        sessionPath: sessionPathIn(directory),
         waitForSave: async (save) => { await Promise.resolve(); await save(); await save(); },
       });
-      expect(JSON.parse(fs.readFileSync(sessionPath, 'utf8'))).toEqual({ token: null, cookies: [], userId: '456' });
-    } finally {
-      fs.rmSync(directory, { force: true, recursive: true });
-    }
+      expect(JSON.parse(fs.readFileSync(sessionPathIn(directory), 'utf8'))).toEqual({
+        token: null,
+        cookies: [],
+        userId: '456',
+      });
+    });
   });
 });
