@@ -18,7 +18,7 @@ on that repository (**v0.1.6**: `348b254ef112f4f8e239a41e7adb3f3e2dac3944`).
 | same | `sonarcloud-zero-issues.yml` | PR-only; polls SonarCloud for zero open issues at head SHA; `ce-task-id` from `sonar-analyze` (v0.1.6+). |
 | same | `ci-passed.yml` | Aggregate required check; tolerates skipped `sonar-zero-open-issues` on non-PR events only. |
 | [`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml) | `dependency-review.yml` | Default `fail-on-severity: high`; caller job `security-events: write`. |
-| [`.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml) | `semantic-pull-request.yml` | Conventional Commits PR titles (`pull_request_target`). |
+| [`.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml) | `semantic-pull-request.yml` | Conventional Commits PR titles (`pull_request`; zizmor blocks `pull_request_target`). |
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | `release-please.yml` | `secrets.RELEASE_TOKEN` (not the org release GitHub App). |
 
 Former inlined jobs removed from this repo: standalone `codeql.yml`, inlined quality/Sonar in `ci.yml`, marketplace dependency-review and semantic-title steps, and inlined Release Please.
