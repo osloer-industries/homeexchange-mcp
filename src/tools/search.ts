@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { api } from '../api';
+import { emptyInputTool, optionalLimitTool, requiredStringTool } from './tool-schema';
 
 const SEARCH_HEADERS: Record<string, string> = {
   'X-SEARCH-API-VERSION': 'v2',
@@ -28,85 +29,18 @@ export const searchTools: Tool[] = [
       },
     },
   },
-  {
-    name: 'get_home',
-    description: 'Get full details for a HomeExchange listing by home ID.',
-    inputSchema: {
-      type: 'object',
-      required: ['home_id'],
-      properties: {
-        home_id: { type: 'string', description: 'Numeric home ID' },
-      },
-    },
-  },
-  {
-    name: 'get_home_calendar',
-    description: 'Get availability calendar for a home showing blocked and available dates.',
-    inputSchema: {
-      type: 'object',
-      required: ['home_id'],
-      properties: {
-        home_id: { type: 'string', description: 'Numeric home ID' },
-      },
-    },
-  },
-  {
-    name: 'get_recommendations',
-    description: 'Get personalised home recommendations based on your profile and history.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Number of recommendations (default 8)' },
-      },
-    },
-  },
-  {
-    name: 'list_my_homes',
-    description: 'List your own HomeExchange listings.',
-    inputSchema: { type: 'object', properties: {} },
-  },
-  {
-    name: 'list_favorites',
-    description: 'List your saved favourite homes.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Number of results (default 20)' },
-      },
-    },
-  },
-  {
-    name: 'add_favorite',
-    description: 'Save a home to your favourites.',
-    inputSchema: {
-      type: 'object',
-      required: ['home_id'],
-      properties: {
-        home_id: { type: 'string', description: 'Home ID to save' },
-      },
-    },
-  },
-  {
-    name: 'remove_favorite',
-    description: 'Remove a home from your favourites.',
-    inputSchema: {
-      type: 'object',
-      required: ['home_id'],
-      properties: {
-        home_id: { type: 'string', description: 'Home ID to remove' },
-      },
-    },
-  },
-  {
-    name: 'list_saved_searches',
-    description: 'List your saved search filters.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Number of results (default 100)' },
-      },
-    },
-  },
+  requiredStringTool('get_home', 'Get full details for a HomeExchange listing by home ID.', {
+    home_id: 'Numeric home ID',
+  }),
+  requiredStringTool('get_home_calendar', 'Get availability calendar for a home showing blocked and available dates.', {
+    home_id: 'Numeric home ID',
+  }),
+  optionalLimitTool('get_recommendations', 'Get personalised home recommendations based on your profile and history.', 'Number of recommendations (default 8)'),
+  emptyInputTool('list_my_homes', 'List your own HomeExchange listings.'),
+  optionalLimitTool('list_favorites', 'List your saved favourite homes.', 'Number of results (default 20)'),
+  requiredStringTool('add_favorite', 'Save a home to your favourites.', { home_id: 'Home ID to save' }),
+  requiredStringTool('remove_favorite', 'Remove a home from your favourites.', { home_id: 'Home ID to remove' }),
+  optionalLimitTool('list_saved_searches', 'List your saved search filters.', 'Number of results (default 100)'),
   {
     name: 'check_saved_search_alerts',
     description: 'Re-run saved searches and compare home ids with a local snapshot. The first run stores a baseline. Later runs report ids that were not in the previous snapshot.',
@@ -114,7 +48,7 @@ export const searchTools: Tool[] = [
       type: 'object',
       properties: {
         saved_search_id: { type: 'string', description: 'Saved search externalId. Omit to check every loaded saved search.' },
-        limit:           { type: 'number', description: 'Number of saved searches to load (default 100)' },
+        limit: { type: 'number', description: 'Number of saved searches to load (default 100)' },
       },
     },
   },
@@ -151,6 +85,14 @@ interface GeocodedLocation {
   bbox: { maxLat: number; maxLon: number; minLat: number; minLon: number };
   locationId: string;
   provider: string;
+}
+
+function limitArg(args: Args, defaultLimit: number): number {
+  return (args['limit'] as number | undefined) ?? defaultLimit;
+}
+
+function homeId(args: Args): string {
+  return args['home_id'] as string;
 }
 
 async function geocodeLocation(location: string): Promise<GeocodedLocation> {
@@ -485,38 +427,32 @@ export async function handleSearch(name: string, args: Args): Promise<unknown> {
     }
 
     case 'get_home':
-      return api.bff(`/homes/${args['home_id'] as string}`);
+      return api.bff(`/homes/${homeId(args)}`);
 
     case 'get_home_calendar':
-      return api.get(`/v1/homes/${args['home_id'] as string}/calendar`);
+      return api.get(`/v1/homes/${homeId(args)}/calendar`);
 
-    case 'get_recommendations': {
-      const limit = (args['limit'] as number | undefined) ?? 8;
-      return api.bffPost('/search/recommendation', {}, { limit: String(limit) });
-    }
+    case 'get_recommendations':
+      return api.bffPost('/search/recommendation', {}, { limit: String(limitArg(args, 8)) });
 
     case 'list_my_homes':
       return api.bff('/v1/homes/me');
 
-    case 'list_favorites': {
-      const limit = (args['limit'] as number | undefined) ?? 20;
+    case 'list_favorites':
       return api.get('/v2/favorites/me', {
         'filters[status]': '1',
         'order_by[createdAt]': 'DESC',
-        limit: String(limit),
+        limit: String(limitArg(args, 20)),
       });
-    }
 
     case 'add_favorite':
-      return api.post('/v2/favorites', { homeId: args['home_id'] });
+      return api.post('/v2/favorites', { homeId: homeId(args) });
 
     case 'remove_favorite':
-      return api.del(`/v2/favorites/${args['home_id'] as string}`);
+      return api.del(`/v2/favorites/${homeId(args)}`);
 
-    case 'list_saved_searches': {
-      const limit = (args['limit'] as number | undefined) ?? 100;
-      return api.bff('/search/saved-searches', { limit: String(limit) });
-    }
+    case 'list_saved_searches':
+      return api.bff('/search/saved-searches', { limit: String(limitArg(args, 100)) });
 
     case 'check_saved_search_alerts':
       return checkSavedSearchAlerts(args);
