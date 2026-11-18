@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { z } from 'zod';
 import { type HomeExchangeClient } from '../../application/ports/homeexchange-client';
 import { HOMEEXCHANGE_API_ORIGINS } from '../../domain/homeexchange-origins';

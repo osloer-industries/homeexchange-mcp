@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { clearInterval, clearTimeout, setInterval, setTimeout } from 'node:timers';
 import { type Browser, type LoginPage, type SessionCookie } from '../../application/ports/browser';
 import { isHomeExchangeHostname } from '../../security';
