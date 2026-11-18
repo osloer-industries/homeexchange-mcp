@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: "17 3 * * 1"
@@ -52,6 +51,7 @@ jobs:
     uses: osloer-industries/.github/.github/workflows/sonarcloud-zero-issues.yml@348b254ef112f4f8e239a41e7adb3f3e2dac3944 # v0.1.6
     with:
       project-key: osloer-industries_homeexchange-mcp
+      ce-task-id: ${{ needs.sonar-analyze.outputs.ce-task-id }}
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
