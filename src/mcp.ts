@@ -1,4 +1,4 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
@@ -47,14 +47,14 @@ export async function handleToolCall(
   }
 }
 
-export function createServer(): Server {
-  const server = new Server(
+export function createServer(): McpServer {
+  const server = new McpServer(
     { name: 'homeexchange', version: '1.0.0' },
     { capabilities: { tools: {} } }
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => listTools());
-  server.setRequestHandler(CallToolRequestSchema, async (req) => {
+  server.server.setRequestHandler(ListToolsRequestSchema, () => listTools());
+  server.server.setRequestHandler(CallToolRequestSchema, (req) => {
     const { name, arguments: args = {} } = req.params;
     return handleToolCall(name, args as Record<string, unknown>);
   });
@@ -63,7 +63,7 @@ export function createServer(): Server {
 }
 
 export async function main(
-  server: Server = createServer(),
+  server: McpServer = createServer(),
   transport: StdioServerTransport = new StdioServerTransport()
 ) {
   await server.connect(transport);
