@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: "17 3 * * 1"
@@ -18,25 +17,25 @@ concurrency:
 
 jobs:
   workflow-security:
-    uses: osloer-industries/.github/.github/workflows/workflow-security.yml@348b254ef112f4f8e239a41e7adb3f3e2dac3944 # v0.1.6
+    uses: osloer-industries/.github/.github/workflows/workflow-security.yml@a6ee91211fd9ba096ec141bacdb67985a82b6767 # v0.1.7
     permissions:
       contents: read
       actions: read
 
   quality:
-    uses: osloer-industries/.github/.github/workflows/node-npm-quality.yml@348b254ef112f4f8e239a41e7adb3f3e2dac3944 # v0.1.6
+    uses: osloer-industries/.github/.github/workflows/node-npm-quality.yml@a6ee91211fd9ba096ec141bacdb67985a82b6767 # v0.1.7
     with:
       check-npm-script: check
 
   codeql:
-    uses: osloer-industries/.github/.github/workflows/codeql-javascript-typescript.yml@348b254ef112f4f8e239a41e7adb3f3e2dac3944 # v0.1.6
+    uses: osloer-industries/.github/.github/workflows/codeql-javascript-typescript.yml@a6ee91211fd9ba096ec141bacdb67985a82b6767 # v0.1.7
     permissions:
       contents: read
       actions: read
       security-events: write
 
   sonar-analyze:
-    uses: osloer-industries/.github/.github/workflows/sonarqube-cloud-node.yml@348b254ef112f4f8e239a41e7adb3f3e2dac3944 # v0.1.6
+    uses: osloer-industries/.github/.github/workflows/sonarqube-cloud-node.yml@a6ee91211fd9ba096ec141bacdb67985a82b6767 # v0.1.7
     permissions:
       contents: read
       pull-requests: read
@@ -49,9 +48,10 @@ jobs:
   sonar-zero-open-issues:
     if: github.event_name == 'pull_request'
     needs: sonar-analyze
-    uses: osloer-industries/.github/.github/workflows/sonarcloud-zero-issues.yml@348b254ef112f4f8e239a41e7adb3f3e2dac3944 # v0.1.6
+    uses: osloer-industries/.github/.github/workflows/sonarcloud-zero-issues.yml@a6ee91211fd9ba096ec141bacdb67985a82b6767 # v0.1.7
     with:
       project-key: osloer-industries_homeexchange-mcp
+      ce-task-id: ${{ needs.sonar-analyze.outputs.ce-task-id }}
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -64,6 +64,6 @@ jobs:
       - sonar-analyze
       - sonar-zero-open-issues
     if: always()
-    uses: osloer-industries/.github/.github/workflows/ci-passed.yml@348b254ef112f4f8e239a41e7adb3f3e2dac3944 # v0.1.6
+    uses: osloer-industries/.github/.github/workflows/ci-passed.yml@a6ee91211fd9ba096ec141bacdb67985a82b6767 # v0.1.7
     with:
       needs-json: ${{ toJSON(needs) }}
