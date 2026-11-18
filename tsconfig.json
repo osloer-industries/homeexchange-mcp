@@ -21,6 +21,7 @@
   },
   "include": [
     "src/**/*",
+    "test-support/**/*.ts",
     "vitest.config.mts",
     "knip.config.ts"
   ],

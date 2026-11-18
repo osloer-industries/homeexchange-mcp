@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { createRecorderPage, getRequestSummary, getResponseSummary, record } from './record';
-import { sessionPathIn, withTempDirectory } from './test/support/session-directory';
+import { sessionPathIn, withTempDirectory } from '../test-support/session-directory';
 
 describe('record summaries', () => {
   it('keeps API paths but drops query strings and non-API hosts', () => {

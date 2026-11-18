@@ -1,13 +1,20 @@
-import { type Tool } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
-import { api } from '../api';
+import { api, z, zodTool, type Tool } from './tool-common';
 
 const searchArgsSchema = z.object({
-  adults: z.number().optional(), children: z.number().optional(), guests: z.number().optional(),
-  checkin: z.string().optional(), checkout: z.string().optional(), exchange_type: z.string().optional(),
-  home_id: z.string().optional(), home_type: z.string().optional(), limit: z.number().optional(),
-  location: z.string().optional(), offset: z.number().optional(),
+  adults: z.number().optional(),
+  children: z.number().optional(),
+  guests: z.number().optional(),
+  checkin: z.string().optional(),
+  checkout: z.string().optional(),
+  exchange_type: z.enum(['GuestPoints', 'simultaneous', 'non_simultaneous']).optional(),
+  home_id: z.string().optional(),
+  home_type: z.enum(['house', 'apartment', 'other']).optional(),
+  limit: z.number().optional(),
+  location: z.string().optional(),
+  offset: z.number().optional(),
 });
+const homeIdArgs = z.object({ home_id: z.string().min(1) });
+const limitArgs = z.object({ limit: z.number().optional() });
 type Args = z.infer<typeof searchArgsSchema>;
 
 const SEARCH_HEADERS: Record<string, string> = {
@@ -16,104 +23,27 @@ const SEARCH_HEADERS: Record<string, string> = {
 };
 
 export const searchTools: Tool[] = [
-  {
-    name: 'search_homes',
-    description: 'Search HomeExchange homes by location, dates, guests, and exchange type.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        location:      { type: 'string', description: 'City, region, or country name' },
-        checkin:       { type: 'string', description: 'Check-in date (YYYY-MM-DD)' },
-        checkout:      { type: 'string', description: 'Check-out date (YYYY-MM-DD)' },
-        guests:        { type: 'number', description: 'Total guests, retained for compatibility' },
-        adults:        { type: 'number', description: 'Number of adults (default 2)' },
-        children:      { type: 'number', description: 'Number of children (default 0)' },
-        exchange_type: { type: 'string', enum: ['GuestPoints', 'simultaneous', 'non_simultaneous'], description: 'Type of exchange' },
-        home_type:     { type: 'string', enum: ['house', 'apartment', 'other'], description: 'Property type' },
-        limit:         { type: 'number', description: 'Results per page (default 20, max 200)' },
-        offset:        { type: 'number', description: 'Pagination offset (default 0)' },
-      },
-    },
-  },
-  {
-    name: 'get_home',
-    description: 'Get full details for a HomeExchange listing by home ID.',
-    inputSchema: {
-      type: 'object',
-      required: ['home_id'],
-      properties: {
-        home_id: { type: 'string', description: 'Numeric home ID' },
-      },
-    },
-  },
-  {
-    name: 'get_home_calendar',
-    description: 'Get availability calendar for a home showing blocked and available dates.',
-    inputSchema: {
-      type: 'object',
-      required: ['home_id'],
-      properties: {
-        home_id: { type: 'string', description: 'Numeric home ID' },
-      },
-    },
-  },
-  {
-    name: 'get_recommendations',
-    description: 'Get personalised home recommendations based on your profile and history.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Number of recommendations (default 8)' },
-      },
-    },
-  },
-  {
-    name: 'list_my_homes',
-    description: 'List your own HomeExchange listings.',
-    inputSchema: { type: 'object', properties: {} },
-  },
-  {
-    name: 'list_favorites',
-    description: 'List your saved favourite homes.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Number of results (default 20)' },
-      },
-    },
-  },
-  {
-    name: 'add_favorite',
-    description: 'Save a home to your favourites.',
-    inputSchema: {
-      type: 'object',
-      required: ['home_id'],
-      properties: {
-        home_id: { type: 'string', description: 'Home ID to save' },
-      },
-    },
-  },
-  {
-    name: 'remove_favorite',
-    description: 'Remove a home from your favourites.',
-    inputSchema: {
-      type: 'object',
-      required: ['home_id'],
-      properties: {
-        home_id: { type: 'string', description: 'Home ID to remove' },
-      },
-    },
-  },
-  {
-    name: 'list_saved_searches',
-    description: 'List your saved search filters.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Number of results (default 100)' },
-      },
-    },
-  },
+  zodTool(
+    'search_homes',
+    'Search HomeExchange homes by location, dates, guests, and exchange type.',
+    searchArgsSchema,
+  ),
+  zodTool('get_home', 'Get full details for a HomeExchange listing by home ID.', homeIdArgs),
+  zodTool(
+    'get_home_calendar',
+    'Get availability calendar for a home showing blocked and available dates.',
+    homeIdArgs,
+  ),
+  zodTool(
+    'get_recommendations',
+    'Get personalised home recommendations based on your profile and history.',
+    limitArgs,
+  ),
+  zodTool('list_my_homes', 'List your own HomeExchange listings.', z.object({})),
+  zodTool('list_favorites', 'List your saved favourite homes.', limitArgs),
+  zodTool('add_favorite', 'Save a home to your favourites.', homeIdArgs),
+  zodTool('remove_favorite', 'Remove a home from your favourites.', homeIdArgs),
+  zodTool('list_saved_searches', 'List your saved search filters.', limitArgs),
 ];
 
 const geocodingFeatureSchema = z.object({
@@ -230,15 +160,19 @@ async function searchHomes(args: Args): Promise<SearchResponse> {
   return location ? filterToLocation(parsedResponse, location) : parsedResponse;
 }
 
+function parseHomeId(args: Args): string {
+  return homeIdArgs.parse(args).home_id;
+}
+
 const handlers: Record<string, (args: Args) => Promise<unknown>> = {
   search_homes: searchHomes,
-  get_home: (args) => api.bff(`/homes/${z.string().min(1).parse(args.home_id)}`),
-  get_home_calendar: (args) => api.get(`/v1/homes/${z.string().min(1).parse(args.home_id)}/calendar`),
+  get_home: (args) => api.bff(`/homes/${parseHomeId(args)}`),
+  get_home_calendar: (args) => api.get(`/v1/homes/${parseHomeId(args)}/calendar`),
   get_recommendations: (args) => api.bffPost('/search/recommendation', {}, { limit: String(numericParameter(args, 'limit', 8)) }),
   list_my_homes: () => api.bff('/v1/homes/me'),
   list_favorites: (args) => api.get('/v2/favorites/me', { 'filters[status]': '1', 'order_by[createdAt]': 'DESC', limit: String(numericParameter(args, 'limit', 20)) }),
-  add_favorite: (args) => api.post('/v2/favorites', { homeId: args['home_id'] }),
-  remove_favorite: (args) => api.del(`/v2/favorites/${z.string().min(1).parse(args.home_id)}`),
+  add_favorite: (args) => api.post('/v2/favorites', { homeId: parseHomeId(args) }),
+  remove_favorite: (args) => api.del(`/v2/favorites/${parseHomeId(args)}`),
   list_saved_searches: (args) => api.bff('/search/saved-searches', { limit: String(numericParameter(args, 'limit', 100)) }),
 };
 

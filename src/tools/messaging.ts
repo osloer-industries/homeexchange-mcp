@@ -1,9 +1,4 @@
-import { type Tool } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
-import { api } from '../api';
-import { zodTool } from './zod-tool';
-
-type Args = Record<string, unknown>;
+import { api, z, zodTool, type Tool, type ToolArgs } from './tool-common';
 
 const conversationIdArgs = z.object({ conversation_id: z.string().min(1) });
 const sendMessageArgs = conversationIdArgs.extend({ text: z.string().min(1) });
@@ -15,26 +10,11 @@ const listConversationsArgs = z.object({
 const startConversationArgs = z.object({ home_id: z.string().min(1), text: z.string().min(1) });
 
 export const messagingTools: Tool[] = [
-  {
-    name: 'list_conversations',
-    description: 'List your HomeExchange conversations.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        filter: {
-          type: 'string',
-          enum: ['ALL', 'UNANSWERED', 'ARCHIVED'],
-          description: 'Filter conversations (default ALL)',
-        },
-        limit: { type: 'number', description: 'Number to return (default 20)' },
-        after: { type: 'string', description: 'Pagination cursor (from previous response)' },
-      },
-    },
-  },
+  zodTool('list_conversations', 'List your HomeExchange conversations.', listConversationsArgs),
   zodTool(
     'get_conversation',
     'Get extended information about a conversation.',
-    conversationIdArgs
+    conversationIdArgs,
   ),
   zodTool('send_message', 'Send a message in an existing conversation.', sendMessageArgs),
   zodTool('get_exchange_request', 'Get exchange request details for a conversation.', conversationIdArgs),
@@ -44,7 +24,7 @@ export const messagingTools: Tool[] = [
   zodTool('start_conversation', 'Start a new conversation with a member about their home.', startConversationArgs),
 ];
 
-export async function handleMessaging(name: string, args: Args): Promise<unknown> {
+export async function handleMessaging(name: string, args: ToolArgs): Promise<unknown> {
   switch (name) {
     case 'list_conversations': {
       const { after, filter, limit } = listConversationsArgs.parse(args);

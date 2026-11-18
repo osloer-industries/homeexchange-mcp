@@ -1,8 +1,8 @@
-import * as fs from 'node:fs';
 import { clearInterval, clearTimeout, setInterval, setTimeout } from 'node:timers';
 import { type Browser, type LoginPage, type SessionCookie } from '../../application/ports/browser';
 import { isHomeExchangeHostname } from '../../security';
 import { defaultSessionPath, interactiveContextInit, launchInteractiveBrowser } from './interactive-session';
+import { claimExclusiveSave, closeBrowserWhenConnected, writeSessionJson } from './session-json';
 
 export interface LoginOptions {
   launchBrowser?: () => Promise<Browser<LoginPage, SessionCookie>>;
@@ -27,7 +27,7 @@ export async function login({
   let token: string | null = null;
   let userId: string | null = null;
   let cookies: SessionCookie[] = [];
-  let saving = false;
+  const saving = { active: false };
   let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   const refreshCookies = async (): Promise<void> => {
@@ -41,18 +41,17 @@ export async function login({
   };
 
   const save = async (): Promise<void> => {
-    if (saving) return;
-    saving = true;
+    if (!claimExclusiveSave(saving)) return;
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     await refreshCookies();
-    fs.writeFileSync(sessionPath, JSON.stringify({ token, cookies, userId }, null, 2));
+    writeSessionJson(sessionPath, { token, cookies, userId });
     log(`Session saved locally with ${cookies.length} trusted HomeExchange cookies.`);
-    if (browser.isConnected()) await browser.close();
+    await closeBrowserWhenConnected(browser);
     process.stdin.pause();
   };
 
   const scheduleAutoSave = async (): Promise<void> => {
-    if (saving || autoSaveTimer || !userId) return;
+    if (saving.active || autoSaveTimer || !userId) return;
     await refreshCookies();
     if (cookies.length === 0) return;
     log('Signed-in session detected. Saving the local session...');

@@ -1,4 +1,3 @@
-import * as fs from 'node:fs';
 import {
   type Browser,
   type BrowserContext,
@@ -9,6 +8,7 @@ import {
 import { isHomeExchangeApiUrl } from '../../security';
 import { getUserId } from './login';
 import { defaultSessionPath, interactiveContextInit, launchInteractiveBrowser } from './interactive-session';
+import { claimExclusiveSave, closeBrowserWhenConnected, writeSessionJson } from './session-json';
 const credentialHeaders = ['authorization', 'x-auth-token', 'x-access-token', 'x-api-key'];
 
 export interface RecorderPage {
@@ -57,16 +57,15 @@ export async function record({
   const page = await createPage(context);
   const capturedHeaders: Record<string, string> = {};
   let userId: string | null = null;
-  let saving = false;
+  const saving = { active: false };
   let complete: (() => void) | undefined;
 
   const save = async (): Promise<void> => {
-    if (saving) return;
-    saving = true;
+    if (!claimExclusiveSave(saving)) return;
     const cookies = await context.cookies();
-    fs.writeFileSync(sessionPath, JSON.stringify({ cookies, headers: capturedHeaders, userId }, null, 2));
+    writeSessionJson(sessionPath, { cookies, headers: capturedHeaders, userId });
     log(`Session saved locally with ${cookies.length} cookies and ${Object.keys(capturedHeaders).length} credential headers.`);
-    if (browser.isConnected()) await browser.close();
+    await closeBrowserWhenConnected(browser);
   };
 
   page.onRequest((request) => {

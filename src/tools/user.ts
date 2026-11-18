@@ -1,9 +1,4 @@
-import { type Tool } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
-import { api } from '../api';
-import { zodTool } from './zod-tool';
-
-type Args = Record<string, unknown>;
+import { api, z, zodTool, type Tool, type ToolArgs } from './tool-common';
 
 const userIdArgs = z.object({ user_id: z.string().min(1) });
 
@@ -13,7 +8,7 @@ export const userTools: Tool[] = [
   zodTool('get_user_ratings', 'Get ratings left for a HomeExchange member.', userIdArgs),
 ];
 
-export async function handleUser(name: string, args: Args): Promise<unknown> {
+export async function handleUser(name: string, args: ToolArgs): Promise<unknown> {
   switch (name) {
     case 'get_user_profile': {
       const { user_id } = userIdArgs.parse(args);

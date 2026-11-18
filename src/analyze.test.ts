@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { analyze, createApiMap, type HarEntry } from './analyze';
-import { withTempDirectory } from './test/support/session-directory';
+import { withTempDirectory } from '../test-support/session-directory';
 
 const entry = (
   method: string,

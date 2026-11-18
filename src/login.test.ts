@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { getUserId, login } from './login';
-import { sessionPathIn, withTempDirectory } from './test/support/session-directory';
+import { sessionPathIn, withTempDirectory } from '../test-support/session-directory';
 
 describe('getUserId', () => {
   it('extracts member and user identifiers only from supported paths', () => {

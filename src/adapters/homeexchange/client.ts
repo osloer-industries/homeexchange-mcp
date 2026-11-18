@@ -1,9 +1,22 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
-import { type HomeExchangeClient } from '../../application/ports/homeexchange-client';
 import { HOMEEXCHANGE_API_ORIGINS } from '../../domain/homeexchange-origins';
 import { isHomeExchangeApiUrl, isHomeExchangeHostname } from '../../security';
+
+export interface HomeExchangeClient {
+  bff(endpoint: string, params?: Record<string, string>): Promise<unknown>;
+  bffPost(
+    endpoint: string,
+    body: unknown,
+    params?: Record<string, string>,
+    headers?: Record<string, string>,
+  ): Promise<unknown>;
+  bffPatch(endpoint: string, body?: unknown, params?: Record<string, string>): Promise<unknown>;
+  del(endpoint: string, params?: Record<string, string>): Promise<unknown>;
+  get(endpoint: string, params?: Record<string, string>): Promise<unknown>;
+  post(endpoint: string, body: unknown, params?: Record<string, string>): Promise<unknown>;
+}
 
 const SESSION_PATH = path.resolve(__dirname, '../session.json');
 
