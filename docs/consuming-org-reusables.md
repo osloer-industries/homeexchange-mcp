@@ -4,8 +4,8 @@ Shared GitHub Actions behavior lives in [osloer-industries/.github](https://gith
 This repository keeps **thin caller workflows** under `.github/workflows/` and pins each org `uses:` ref to a full
 commit SHA with a `# v0.x.y` version comment (never `# main`). The org contract, input defaults, and copy-paste YAML
 live in
-[consuming-workflows.md](https://github.com/osloer-industries/.github/blob/80340f8b509c4c5ecde51bff0ddb6c04e6687fdc/docs/consuming-workflows.md)
-on that repository (**v0.1.4**: `80340f8b509c4c5ecde51bff0ddb6c04e6687fdc`).
+[consuming-workflows.md](https://github.com/osloer-industries/.github/blob/348b254ef112f4f8e239a41e7adb3f3e2dac3944/docs/consuming-workflows.md)
+on that repository (**v0.1.6**: `348b254ef112f4f8e239a41e7adb3f3e2dac3944`).
 
 ## Callers in this repository
 
@@ -15,10 +15,10 @@ on that repository (**v0.1.4**: `80340f8b509c4c5ecde51bff0ddb6c04e6687fdc`).
 | same | `node-npm-quality.yml` | Check name **Quality** (`npm run check`, production audit). |
 | same | `codeql-javascript-typescript.yml` | Public repo: default Code Scanning upload. Weekly schedule inherits from `CI` workflow. |
 | same | `sonarqube-cloud-node.yml` | Check name **Analyze**; `coverage-npm-script: test` (Vitest coverage). Caller job needs `pull-requests: read`. Skips when `SONAR_TOKEN` is empty (fork/Dependabot). |
-| same | `sonarcloud-zero-issues.yml` | PR-only; polls SonarCloud for zero open issues at head SHA. |
+| same | `sonarcloud-zero-issues.yml` | PR-only; polls SonarCloud for zero open issues at head SHA; `ce-task-id` from `sonar-analyze` (v0.1.6+). |
 | same | `ci-passed.yml` | Aggregate required check; tolerates skipped `sonar-zero-open-issues` on non-PR events only. |
-| [`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml) | `dependency-review.yml` | Default `fail-on-severity: high`. |
-| [`.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml) | `semantic-pull-request.yml` | Conventional Commits PR titles. |
+| [`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml) | `dependency-review.yml` | Pin v0.1.7+; gate check **Review dependency changes** (OSV job named for private repos only); caller job `security-events: write`. |
+| [`.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml) | `semantic-pull-request.yml` | Conventional Commits PR titles (`pull_request`; zizmor blocks `pull_request_target`). |
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | `release-please.yml` | `secrets.RELEASE_TOKEN` (not the org release GitHub App). |
 
 Former inlined jobs removed from this repo: standalone `codeql.yml`, inlined quality/Sonar in `ci.yml`, marketplace dependency-review and semantic-title steps, and inlined Release Please.
