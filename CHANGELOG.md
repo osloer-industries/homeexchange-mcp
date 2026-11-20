@@ -2,6 +2,13 @@
 
 All notable changes to homeexchange-mcp are documented here.
 
+## [0.1.7](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.6...v0.1.7) (2026-11-20)
+
+
+### Bug Fixes
+
+* **deps:** resolve minimatch DoS advisory via eslint and typescript-eslint bumps ([#117](https://github.com/osloer-industries/homeexchange-mcp/issues/117)) ([2df2f32](https://github.com/osloer-industries/homeexchange-mcp/commit/2df2f32158fba8915808029ae3a901297b3a7620))
+
 ## [0.1.6](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.5...v0.1.6) (2026-11-17)
 
 
