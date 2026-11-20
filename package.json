@@ -68,7 +68,6 @@
     "js-yaml": "4.3.0",
     "lodash": "4.18.1",
     "lodash-es": "4.18.1",
-    "minimatch": "10.2.4",
     "nanoid": "3.3.18",
     "micromatch": {
       "picomatch": "2.3.2"
