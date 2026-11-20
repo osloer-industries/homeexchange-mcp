@@ -13,6 +13,11 @@ const { fetchMock } = vi.hoisted(() => ({ fetchMock: vi.fn<typeof fetch>() }));
 vi.mock('../api', () => ({ api: apiMock }));
 vi.stubGlobal('fetch', fetchMock);
 
+const SEARCH_HOMES = 'search_homes';
+const CHECKIN_AUG_2026 = '2026-08-01';
+const LOCATION_BRUSSELS = 'Brussels';
+const GEOCODING_TEST_TOKEN = 'test-token';
+
 describe('search tools', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,12 +39,12 @@ describe('search tools', () => {
   });
 
   it('keeps the legacy guest count while supporting adults and children', () => {
-    expect(searchTools.find((tool) => tool.name === 'search_homes')?.inputSchema.properties)
+    expect(searchTools.find((tool) => tool.name === SEARCH_HOMES)?.inputSchema.properties)
       .toMatchObject({ guests: expect.any(Object), adults: expect.any(Object), children: expect.any(Object) });
   });
 
   it('does not send an incomplete date range', async () => {
-    await handleSearch('search_homes', { checkin: '2026-08-01' });
+    await handleSearch(SEARCH_HOMES, { checkin: CHECKIN_AUG_2026 });
     expect(apiMock.bffPost).toHaveBeenCalledWith(
       '/search/homes',
       expect.not.objectContaining({ search_query: expect.objectContaining({ dateRanges: expect.anything() }) }),
@@ -49,14 +54,14 @@ describe('search tools', () => {
   });
 
   it('uses the current BFF request shape and required headers', async () => {
-    await handleSearch('search_homes', {
-      checkin: '2026-08-01', checkout: '2026-08-22', guests: 3,
+    await handleSearch(SEARCH_HOMES, {
+      checkin: CHECKIN_AUG_2026, checkout: '2026-08-22', guests: 3,
       exchange_type: 'GuestPoints', home_type: 'apartment', limit: 999, offset: -2,
     });
 
     expect(apiMock.bffPost).toHaveBeenCalledWith('/search/homes', {
       search_query: {
-        dateRanges: [{ from: '2026-08-01', to: '2026-08-22' }],
+        dateRanges: [{ from: CHECKIN_AUG_2026, to: '2026-08-22' }],
         guests: { adults: 3, children: 0 },
         exchangeTypes: ['GuestPoints'], homeTypes: ['apartment'],
       },
@@ -66,27 +71,27 @@ describe('search tools', () => {
   });
 
   it('requires an explicit personal token before geocoding a location', async () => {
-    await expect(handleSearch('search_homes', { location: 'Brussels' })).rejects.toThrow(
+    await expect(handleSearch(SEARCH_HOMES, { location: LOCATION_BRUSSELS })).rejects.toThrow(
       'HOMEEXCHANGE_GEOCODING_TOKEN'
     );
   });
 
   it('reports failed and empty geocoding results without sending a search request', async () => {
-    process.env['HOMEEXCHANGE_GEOCODING_TOKEN'] = 'test-token';
+    process.env['HOMEEXCHANGE_GEOCODING_TOKEN'] = GEOCODING_TEST_TOKEN;
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 500 }));
-    await expect(handleSearch('search_homes', { location: 'Brussels' })).rejects.toThrow(
+    await expect(handleSearch(SEARCH_HOMES, { location: LOCATION_BRUSSELS })).rejects.toThrow(
       'Could not geocode Brussels.'
     );
 
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ features: [] }), { status: 200 }));
-    await expect(handleSearch('search_homes', { location: 'Brussels' })).rejects.toThrow(
+    await expect(handleSearch(SEARCH_HOMES, { location: LOCATION_BRUSSELS })).rejects.toThrow(
       'No location found for Brussels.'
     );
     expect(apiMock.bffPost).not.toHaveBeenCalled();
   });
 
   it('geocodes a location and filters a BFF response to its bounding box', async () => {
-    process.env['HOMEEXCHANGE_GEOCODING_TOKEN'] = 'test-token';
+    process.env['HOMEEXCHANGE_GEOCODING_TOKEN'] = GEOCODING_TEST_TOKEN;
     fetchMock.mockResolvedValue(new Response(JSON.stringify({
       features: [{
         bbox: [4, 50, 5, 51], geometry: { coordinates: [4.5, 50.5] },
@@ -95,7 +100,7 @@ describe('search tools', () => {
     }), { status: 200 }));
     apiMock.bffPost.mockResolvedValue({ results: [{ id: 1, lat: 50.5, lng: 4.5 }, { id: 2, lat: 48, lng: 2 }] });
 
-    await expect(handleSearch('search_homes', { location: 'Brussels', adults: 2, children: 1 }))
+    await expect(handleSearch(SEARCH_HOMES, { location: LOCATION_BRUSSELS, adults: 2, children: 1 }))
       .resolves.toEqual({ results: [{ id: 1, lat: 50.5, lng: 4.5 }] });
     expect(apiMock.bffPost.mock.calls[0]?.[1]).toMatchObject({
       search_query: { locationId: 'feature-1', provider: 'openstreetmap', guests: { adults: 2, children: 1 } },
@@ -103,7 +108,7 @@ describe('search tools', () => {
   });
 
   it('filters homes responses and applies default geocode bounding boxes', async () => {
-    process.env['HOMEEXCHANGE_GEOCODING_TOKEN'] = 'test-token';
+    process.env['HOMEEXCHANGE_GEOCODING_TOKEN'] = GEOCODING_TEST_TOKEN;
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
       features: [{
         geometry: { coordinates: [4.5, 50.5] },
@@ -118,7 +123,7 @@ describe('search tools', () => {
       ],
     });
 
-    await expect(handleSearch('search_homes', { location: 'Brussels' })).resolves.toEqual({
+    await expect(handleSearch(SEARCH_HOMES, { location: LOCATION_BRUSSELS })).resolves.toEqual({
       homes: [{ id: 1, latitude: 50.5, longitude: 4.5 }],
     });
   });

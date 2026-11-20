@@ -32,6 +32,8 @@ vi.mock('fs', () => ({
 
 vi.stubGlobal('fetch', fetchMock);
 
+const USERS_ME_PATH = '/v1/users/123';
+
 function isRequestInit(value: unknown): value is RequestInit {
   return typeof value === 'object' && value !== null;
 }
@@ -51,10 +53,10 @@ describe('api client', () => {
   });
 
   it('sends authenticated requests only to the API origin', async () => {
-    await expect(api.get('/v1/users/123', { include: 'profile' })).resolves.toEqual({ ok: true });
+    await expect(api.get(USERS_ME_PATH, { include: 'profile' })).resolves.toEqual({ ok: true });
 
     const [url, init] = fetchCall(0);
-    expect(url.toString()).toBe('https://api.homeexchange.com/v1/users/123?include=profile');
+    expect(url.toString()).toBe(`https://api.homeexchange.com${USERS_ME_PATH}?include=profile`);
     expect(init.headers).toMatchObject({
       Authorization: 'Bearer test-token',
       Cookie: 'trusted=yes',
@@ -98,7 +100,7 @@ describe('api client', () => {
   it('reports an expired session without exposing the response body', async () => {
     fetchMock.mockResolvedValueOnce(response('private response', 401));
 
-    const error: unknown = await api.get('/v1/users/123').catch((caught: unknown) => caught);
+    const error: unknown = await api.get(USERS_ME_PATH).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(SessionExpiredError);
     expect(error).toMatchObject({
       name: 'SessionExpiredError',
@@ -109,7 +111,7 @@ describe('api client', () => {
   it('limits error response details', async () => {
     fetchMock.mockResolvedValueOnce(response('x'.repeat(300), 500));
 
-    await expect(api.get('/v1/users/123')).rejects.toThrow(`HTTP 500 Internal Server Error: ${'x'.repeat(200)}`);
+    await expect(api.get(USERS_ME_PATH)).rejects.toThrow(`HTTP 500 Internal Server Error: ${'x'.repeat(200)}`);
   });
 
   it('handles successful empty responses', async () => {

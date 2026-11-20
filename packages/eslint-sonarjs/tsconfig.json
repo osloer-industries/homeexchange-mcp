@@ -19,6 +19,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["eslint.config.mjs", "list-enabled-rules.mjs", "run.mjs"],
+  "include": ["eslint.config.mjs", "sonarjs-rules.mjs", "list-enabled-rules.mjs", "run.mjs"],
   "exclude": ["node_modules", "**/*.test.mjs"]
 }

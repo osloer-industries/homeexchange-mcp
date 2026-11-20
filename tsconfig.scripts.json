@@ -15,8 +15,8 @@
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["node"]
+    "types": ["node", "vitest/globals"]
   },
-  "include": ["scripts/**/*.mts"],
-  "exclude": ["scripts/**/*.test.mts"]
+  "include": ["scripts/**/*.mts", "scripts/**/*.test.mts"],
+  "exclude": []
 }

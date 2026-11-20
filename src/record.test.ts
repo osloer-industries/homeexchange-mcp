@@ -23,7 +23,10 @@ describe('record summaries', () => {
       on(_event: 'response', _listener: (response: { request: () => { url: () => string }; status: () => number }) => void): void;
       on(_event: string, _listener: unknown): void {}
     }
-    const page = await createRecorderPage({ cookies: async () => [], newPage: async () => new RawPage() });
+    const page = await createRecorderPage({
+      cookies: () => Promise.resolve([]),
+      newPage: () => Promise.resolve(new RawPage()),
+    });
     await page.goto('https://www.homeexchange.com');
     page.onRequest(() => undefined);
     page.onResponse(() => undefined);
@@ -38,7 +41,7 @@ describe('record', () => {
     let disconnected: (() => void) | undefined;
     const close = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
     const page = {
-      goto: vi.fn<(url: string) => Promise<void>>().mockImplementation(async () => {
+      goto: vi.fn<(url: string) => Promise<void>>().mockImplementation(() => {
         requestListener?.({
           headers: () => ({ authorization: 'Bearer local-secret' }),
           method: () => 'POST',
@@ -48,13 +51,14 @@ describe('record', () => {
           request: () => ({ url: () => 'https://api.homeexchange.com/api/users/123?member=private' }),
           status: () => 201,
         });
+        return Promise.resolve();
       }),
       onRequest: (listener: NonNullable<typeof requestListener>): void => { requestListener = listener; },
       onResponse: (listener: NonNullable<typeof responseListener>): void => { responseListener = listener; },
     };
     const context = {
       cookies: vi.fn<() => Promise<{ name: string }[]>>().mockResolvedValue([{ name: 'session' }]),
-      newPage: async (): Promise<never> => { throw new Error('createPage is injected'); },
+      newPage: (): Promise<never> => Promise.reject(new Error('createPage is injected')),
     };
     const browser = {
       close,
@@ -67,11 +71,14 @@ describe('record', () => {
     await withTempDirectory('homeexchange-record-', async (directory) => {
       const sessionPath = sessionPathIn(directory);
       await record({
-        launchBrowser: async () => browser,
-        createPage: async () => page,
+        launchBrowser: () => Promise.resolve(browser),
+        createPage: () => Promise.resolve(page),
         log,
         sessionPath,
-        waitForCompletion: async () => { disconnected?.(); },
+        waitForCompletion: () => {
+          disconnected?.();
+          return Promise.resolve();
+        },
       });
 
       expect(JSON.parse(fs.readFileSync(sessionPath, 'utf8'))).toEqual({
@@ -88,9 +95,10 @@ describe('record', () => {
   it('ignores non-API traffic and does not close an already disconnected browser', async () => {
     let requestListener: ((request: { headers: () => Record<string, string>; method: () => string; url: () => string }) => void) | undefined;
     let responseListener: ((response: { request: () => { url: () => string }; status: () => number }) => void) | undefined;
-    const fireRecordedEvents = async (): Promise<void> => {
+    const fireRecordedEvents = (): Promise<void> => {
       requestListener?.({ headers: () => ({}), method: () => 'GET', url: () => 'https://example.com/ignore' });
       responseListener?.({ request: () => ({ url: () => 'https://example.com/ignore' }), status: () => 200 });
+      return Promise.resolve();
     };
     const page = {
       goto: fireRecordedEvents,
@@ -98,22 +106,22 @@ describe('record', () => {
       onResponse: (listener: NonNullable<typeof responseListener>): void => { responseListener = listener; },
     };
     const context = {
-      cookies: async (): Promise<unknown[]> => [],
-      newPage: async (): Promise<never> => { throw new Error('createPage is injected'); },
+      cookies: (): Promise<unknown[]> => Promise.resolve([]),
+      newPage: (): Promise<never> => Promise.reject(new Error('createPage is injected')),
     };
     const browser = {
       close: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
       isConnected: (): boolean => false,
-      newContext: async (): Promise<typeof context> => context,
+      newContext: (): Promise<typeof context> => Promise.resolve(context),
       on: (): void => undefined,
     };
 
     await withTempDirectory('homeexchange-record-', async (directory) => {
       await record({
-        launchBrowser: async () => browser,
-        createPage: async () => page,
+        launchBrowser: () => Promise.resolve(browser),
+        createPage: () => Promise.resolve(page),
         sessionPath: sessionPathIn(directory),
-        waitForCompletion: async () => undefined,
+        waitForCompletion: () => Promise.resolve(),
       });
       expect(JSON.parse(fs.readFileSync(sessionPathIn(directory), 'utf8'))).toEqual({
         cookies: [],

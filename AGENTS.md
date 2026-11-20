@@ -53,6 +53,30 @@ Browser automation (Playwright) follows
 [docs/playwright-ci-dependencies.md](docs/playwright-ci-dependencies.md): CI
 uses `npm ci --ignore-scripts`; install browsers locally or in an explicit step.
 
+## Enforced escape-hatch rules (Oxlint)
+
+These rules are CI-enforced in production code, tests, and tooling. Fix root
+causes instead of bypassing checks.
+
+| Rule | Prefer instead |
+| --- | --- |
+| `typescript/no-explicit-any` | `unknown` plus narrowing, generics, or Zod schemas |
+| `typescript/ban-ts-comment` (all `@ts-*`, including described `@ts-expect-error`) | Fix the type error; in tests pass bad input as `unknown` through the real parser |
+| `typescript/no-non-null-assertion` | Guards, optional chaining, or an explicit throw on invalid state |
+| `typescript/consistent-type-assertions` (`never`; `as const` / `satisfies` allowed) | Zod `parse` / `safeParse`, type guards, typed test fixtures |
+| `osloer/no-definite-assignment` (`scripts/oxlint-plugin-osloer.mts`) | Initialise `x!:` fields and variables, or use `T \| undefined` and narrow |
+| `unicorn/no-abusive-eslint-disable` | No blanket disables; shrink the suppression baseline instead |
+| `no-empty` (`allowEmptyCatch: false`) | Handle or rethrow errors explicitly |
+| `reportUnusedDisableDirectives` | Remove stale disable comments |
+
+SonarJS (`npm run lint:sonarjs`) also enforces `sonarjs/no-trivial-assertions`
+and shift-left rules such as `no-await-in-loop` and `@typescript-eslint/require-await`.
+The suppression baseline (`scripts/suppression-baseline.json`) may only shrink;
+run `npm run lint:suppressions` after cleanup.
+
+Gate canaries in `scripts/gate-self.test.ts` assert Oxlint and SonarJS reject each
+escape hatch. Org spec: [typescript-node-template#121](https://github.com/osloer-industries/typescript-node-template/issues/121).
+
 ## Agent workflow (org-wide, keep identical across osloer-industries repos)
 
 These rules apply to every agent (Cursor, Grok Bot, any other) working in this repo.

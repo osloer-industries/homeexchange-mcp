@@ -1,11 +1,7 @@
-import sonarjs from "eslint-plugin-sonarjs";
+import { buildSonarjsTypeScriptFlatRules } from "./sonarjs-rules.mjs";
 
 export function listEnabledSonarjsRules() {
-  const recommendedRules = sonarjs.configs.recommended.rules ?? {};
-  return Object.entries(recommendedRules)
-    .filter(([, severity]) => severity === "error" || severity === 2)
-    .map(([name]) => name)
-    .toSorted((a, b) => a.localeCompare(b));
+  return Object.keys(buildSonarjsTypeScriptFlatRules()).toSorted((a, b) => a.localeCompare(b));
 }
 
 const isMain = process.argv[1] !== undefined && import.meta.url.endsWith(process.argv[1].replaceAll("\\", "/"));
