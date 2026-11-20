@@ -38,8 +38,13 @@ describe('isHomeExchangeApiUrl', () => {
     expect(isHomeExchangeApiUrl(new URL(value))).toBe(true);
   });
 
+  it('rejects cleartext API origins', () => {
+    const url = new URL('https://api.homeexchange.com/v1/users/1');
+    url.protocol = 'http:';
+    expect(isHomeExchangeApiUrl(url)).toBe(false);
+  });
+
   it.each([
-    'http://api.homeexchange.com/v1/users/1',
     'https://homeexchange.com/api',
     'https://api.homeexchange.com.example.org/v1/users/1',
   ])('rejects untrusted API URL %s', (value) => {

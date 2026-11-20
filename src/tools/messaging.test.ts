@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleMessaging, messagingTools } from './messaging';
 
 const apiMock = vi.hoisted(() => ({
-  bff: vi.fn(),
-  bffPatch: vi.fn(),
-  bffPost: vi.fn(),
+  bff: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  bffPatch: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  bffPost: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }));
 
 vi.mock('../api', () => ({ api: apiMock }));

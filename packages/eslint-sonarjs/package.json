@@ -1,0 +1,31 @@
+{
+  "name": "@osloer-industries/eslint-sonarjs",
+  "version": "1.0.0",
+  "description": "SonarJS ESLint recommended rules for the template (TypeScript 6 parser; root stays on TypeScript 7).",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "eslint-sonarjs": "run.mjs"
+  },
+  "files": [
+    "eslint.config.mjs",
+    "run.mjs",
+    "list-enabled-rules.mjs"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "overrides": {
+    "minimatch": "11.0.9"
+  },
+  "scripts": {
+    "list-rules": "node list-enabled-rules.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "8.73.0",
+    "eslint": "10.15.0",
+    "eslint-plugin-sonarjs": "4.2.2",
+    "typescript": "6.0.3"
+  }
+}
