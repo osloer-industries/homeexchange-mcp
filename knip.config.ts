@@ -10,7 +10,7 @@ const config: KnipConfig = {
       project: ["src/**/*.ts", "scripts/**/*.{ts,mjs}"],
     },
     "packages/eslint-sonarjs": {
-      entry: ["**/*.test.mjs"],
+      entry: ["eslint.config.mjs", "**/*.test.mjs"],
       project: ["**/*.{mjs,ts}"],
     },
   },
