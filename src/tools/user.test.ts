@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleUser, userTools } from './user';
 
 const apiMock = vi.hoisted(() => ({
-  get: vi.fn(),
+  get: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }));
 
 vi.mock('../api', () => ({ api: apiMock }));
