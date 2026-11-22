@@ -47,9 +47,11 @@ describe('createApiMap', () => {
   });
 });
 
+const ANALYZE_TEMP_PREFIX = 'homeexchange-analyze-';
+
 describe('analyze', () => {
   it('writes a redacted endpoint map and reports its result', async () => {
-    await withTempDirectory('homeexchange-analyze-', (directory) => {
+    await withTempDirectory(ANALYZE_TEMP_PREFIX, (directory) => {
       const { input, output } = harPaths(directory);
       const messages: string[] = [];
 
@@ -66,13 +68,13 @@ describe('analyze', () => {
   });
 
   it('rejects a missing HAR file', async () => {
-    await withTempDirectory('homeexchange-analyze-', (directory) => {
+    await withTempDirectory(ANALYZE_TEMP_PREFIX, (directory) => {
       expect(() => analyze(path.join(directory, 'missing.har'))).toThrow('No HAR file found');
     });
   });
 
   it('reports an unauthenticated capture without disclosing its contents', async () => {
-    await withTempDirectory('homeexchange-analyze-', (directory) => {
+    await withTempDirectory(ANALYZE_TEMP_PREFIX, (directory) => {
       const { input, output } = harPaths(directory);
       const messages: string[] = [];
 

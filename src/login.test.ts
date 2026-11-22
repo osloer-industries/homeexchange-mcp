@@ -17,11 +17,12 @@ describe('login', () => {
     let disconnected: (() => void) | undefined;
     const close = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
     const page = {
-      goto: vi.fn<(url: string) => Promise<void>>().mockImplementation(async () => {
+      goto: vi.fn<(url: string) => Promise<void>>().mockImplementation(() => {
         requestListener?.({
           headers: () => ({ authorization: 'Bearer test-token' }),
           url: () => 'https://www.homeexchange.com/api/users/123',
         });
+        return Promise.resolve();
       }),
       on: (_event: 'request', listener: typeof requestListener) => { requestListener = listener; },
     };
@@ -43,7 +44,7 @@ describe('login', () => {
     await withTempDirectory('homeexchange-login-', async (directory) => {
       const sessionPath = sessionPathIn(directory);
       await login({
-        launchBrowser: async () => browser,
+        launchBrowser: () => Promise.resolve(browser),
         log,
         sessionPath,
         waitForSave: async (save) => { await save(); },
@@ -63,28 +64,29 @@ describe('login', () => {
   it('safely saves when cookie refresh fails and the browser is already closed', async () => {
     let requestListener: ((request: { headers: () => Record<string, string>; url: () => string }) => void) | undefined;
     const page = {
-      goto: async (): Promise<void> => {
+      goto: (): Promise<void> => {
         requestListener?.({
           headers: () => ({}),
           url: () => 'https://www.homeexchange.com/members/456',
         });
+        return Promise.resolve();
       },
       on: (_event: 'request', listener: typeof requestListener): void => { requestListener = listener; },
     };
     const context = {
-      cookies: async (): Promise<never> => Promise.reject(new Error('browser closed')),
-      newPage: async (): Promise<typeof page> => page,
+      cookies: (): Promise<never> => Promise.reject(new Error('browser closed')),
+      newPage: (): Promise<typeof page> => Promise.resolve(page),
     };
     const browser = {
-      close: async (): Promise<void> => undefined,
+      close: (): Promise<void> => Promise.resolve(),
       isConnected: (): boolean => false,
-      newContext: async (): Promise<typeof context> => context,
+      newContext: (): Promise<typeof context> => Promise.resolve(context),
       on: (): void => undefined,
     };
 
     await withTempDirectory('homeexchange-login-', async (directory) => {
       await login({
-        launchBrowser: async () => browser,
+        launchBrowser: () => Promise.resolve(browser),
         log: () => undefined,
         sessionPath: sessionPathIn(directory),
         waitForSave: async (save) => { await Promise.resolve(); await save(); await save(); },

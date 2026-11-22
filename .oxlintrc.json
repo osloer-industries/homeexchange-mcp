@@ -31,7 +31,9 @@
     "osloer/no-definite-assignment": "error",
     "typescript/no-non-null-assertion": "error",
     "unicorn/no-abusive-eslint-disable": "error",
+    "no-await-in-loop": "error",
     "no-empty": ["error", { "allowEmptyCatch": false }],
+    "typescript/require-await": "error",
     "vitest/no-focused-tests": "error"
   },
   "overrides": [

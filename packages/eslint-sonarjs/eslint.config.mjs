@@ -3,23 +3,36 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import tsParser from "@typescript-eslint/parser";
+import tseslint from "@typescript-eslint/eslint-plugin";
 import sonarjs from "eslint-plugin-sonarjs";
+
+import {
+  buildSonarjsJavaScriptFlatRules,
+  buildSonarjsTypeScriptFlatRules,
+} from "./sonarjs-rules.mjs";
 
 const repoRoot = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const recommended = sonarjs.configs.recommended;
+const sonarTsRules = buildSonarjsTypeScriptFlatRules();
+const sonarJsRules = buildSonarjsJavaScriptFlatRules();
 
-const tsFiles = ["src/**/*.ts", "scripts/**/*.mts"];
+const tsFiles = ["src/**/*.ts", "scripts/**/*.mts", "scripts/**/*.test.ts"];
 const jsFiles = ["scripts/**/*.mjs", "packages/**/*.mjs"];
+
+const sonarPlugins = {
+  ...recommended.plugins,
+  "@typescript-eslint": tseslint,
+};
 
 export default [
   {
-    ignores: ["dist/**", "coverage/**", "node_modules/**", "scripts/**/*.test.mts"],
+    ignores: ["dist/**", "coverage/**", "node_modules/**"],
   },
   {
-    name: recommended.name ?? "sonarjs/recommended",
+    name: "sonarjs/shift-left-ts",
     files: tsFiles,
-    plugins: recommended.plugins ?? {},
-    rules: recommended.rules ?? {},
+    plugins: sonarPlugins,
+    rules: sonarTsRules,
     settings: recommended.settings ?? {},
     languageOptions: {
       parser: tsParser,
@@ -30,10 +43,10 @@ export default [
     },
   },
   {
-    name: recommended.name ?? "sonarjs/recommended-js",
+    name: "sonarjs/shift-left-js",
     files: jsFiles,
-    plugins: recommended.plugins ?? {},
-    rules: recommended.rules ?? {},
+    plugins: sonarPlugins,
+    rules: sonarJsRules,
     settings: recommended.settings ?? {},
     languageOptions: {
       ecmaVersion: "latest",
