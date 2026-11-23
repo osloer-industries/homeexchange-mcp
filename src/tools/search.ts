@@ -87,7 +87,7 @@ type GeocodedLocation = {
 };
 type SearchHome = z.infer<typeof searchHomeSchema>;
 type SearchResponse = z.infer<typeof searchResponseSchema>;
-type SearchLocationRef = Pick<GeocodedLocation, 'locationId' | 'provider'>;
+type SearchLocationRef = Pick<GeocodedLocation, 'locationId'> & { provider?: string };
 
 const SAVED_SEARCH_SNAPSHOT = 'saved-search-alerts.json';
 const BLOCKED_SNAPSHOT_FILENAMES = new Set(['session.json', '.env']);
@@ -136,9 +136,17 @@ function textValue(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value : undefined;
 }
 
+function isSavedSearch(value: unknown): value is SavedSearch {
+  return isRecord(value);
+}
+
 function savedSearchesFrom(response: unknown): SavedSearch[] | undefined {
   if (!isRecord(response) || !Array.isArray(response['data'])) return undefined;
-  return response['data'].filter(isRecord) as SavedSearch[];
+  const searches: SavedSearch[] = [];
+  for (const entry of response['data']) {
+    if (isSavedSearch(entry)) searches.push(entry);
+  }
+  return searches;
 }
 
 async function geocodeLocation(location: string): Promise<GeocodedLocation> {
@@ -229,25 +237,29 @@ function parseHomeId(args: Args): string {
   return homeIdArgs.parse(args).home_id;
 }
 
-function alertSearchBody(search: SavedSearch): Record<string, unknown> | undefined {
-  const locationId = textValue(search.searchCriteria?.location?.locationId);
-  if (!locationId) return undefined;
-
-  const provider = textValue(search.searchCriteria?.location?.provider);
-  const range = search.searchCriteria?.calendar?.dateRanges?.[0];
+function guestArgsFromSavedSearch(search: SavedSearch): Args {
   const guests = search.searchCriteria?.guestCriteria?.guests;
   const args: Args = {
     children: typeof guests?.children === 'number' ? guests.children : 0,
   };
   if (typeof guests?.adults === 'number') args.adults = guests.adults;
+  return args;
+}
 
+function withFirstDateRange(args: Args, search: SavedSearch): Args {
+  const range = search.searchCriteria?.calendar?.dateRanges?.[0];
   const from = textValue(range?.from);
   const to = textValue(range?.to);
-  if (from && to) {
-    args.checkin = from;
-    args.checkout = to;
-  }
+  if (!from || !to) return args;
+  return { ...args, checkin: from, checkout: to };
+}
 
+function alertSearchBody(search: SavedSearch): Record<string, unknown> | undefined {
+  const locationId = textValue(search.searchCriteria?.location?.locationId);
+  if (!locationId) return undefined;
+
+  const provider = textValue(search.searchCriteria?.location?.provider);
+  const args = withFirstDateRange(guestArgsFromSavedSearch(search), search);
   // flexibleSearch, isLuxury, babies, and queryParams are not sent.
   return searchBody(args, { locationId, ...(provider ? { provider } : {}) });
 }

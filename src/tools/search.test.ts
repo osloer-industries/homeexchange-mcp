@@ -17,9 +17,73 @@ vi.mock('../api', () => ({ api: apiMock }));
 vi.stubGlobal('fetch', fetchMock);
 
 const SEARCH_HOMES = 'search_homes';
+const BFF_SEARCH_HOMES = '/search/homes';
+const BFF_SAVED_SEARCHES = '/search/saved-searches';
+const CHECK_SAVED_SEARCH_ALERTS = 'check_saved_search_alerts';
+const SAVED_SEARCH_SNAPSHOT_FILE = 'saved-search-alerts.json';
+const SAVED_SEARCH_TEMP_PREFIX = 'he-saved-search-';
 const CHECKIN_AUG_2026 = '2026-08-01';
 const LOCATION_BRUSSELS = 'Brussels';
 const GEOCODING_TEST_TOKEN = 'test-token';
+
+function savedSearchFixtureWithoutExternalId() {
+  return { ...savedSearchFixture(), externalId: undefined };
+}
+
+function savedSearchFixture(externalId = 'search-1') {
+  return {
+    externalId,
+    userId: 100,
+    alertConfig: { enabled: true, locale: 'en', email: 'redacted' },
+    displayInformation: {
+      title: externalId === 'search-1' ? 'Portugal' : 'Lisbon',
+      description: 'Summer',
+    },
+    source: 'web',
+    searchCriteria: {
+      calendar: {
+        dateRanges: [
+          { from: '2026-07-01', to: '2026-07-15' },
+          { from: '2026-08-01', to: '2026-08-08' },
+        ],
+        flexibleSearch: { duration: 'P7D' },
+      },
+      location: { locationId: `loc-${externalId}`, provider: 'openstreetmap' },
+      guestCriteria: {
+        guests: { adults: 2, children: null, babies: 1 },
+        guestCount: 2,
+      },
+      additionalCriteria: { isLuxury: true },
+    },
+    queryParams: 'place=portugal',
+    alertLegacyId: 5,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-02T00:00:00Z',
+  };
+}
+
+function readSnapshotContents(filePath: string): { parsed: unknown; mode: number } {
+  const fd = fs.openSync(filePath, 'r');
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(fd, 'utf8'));
+    return {
+      parsed,
+      mode: fs.fstatSync(fd).mode & 0o777,
+    };
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function expectNoSensitiveCopy(value: unknown) {
+  const serialized = JSON.stringify(value);
+  expect(serialized).not.toContain('redacted');
+  expect(serialized).not.toContain('userId');
+  expect(serialized).not.toContain('queryParams');
+  expect(serialized).not.toContain('isLuxury');
+  expect(serialized).not.toContain('babies');
+  expect(serialized).not.toContain('flexibleSearch');
+}
 
 describe('search tools', () => {
   beforeEach(() => {
@@ -49,7 +113,7 @@ describe('search tools', () => {
   it('does not send an incomplete date range', async () => {
     await handleSearch(SEARCH_HOMES, { checkin: CHECKIN_AUG_2026 });
     expect(apiMock.bffPost).toHaveBeenCalledWith(
-      '/search/homes',
+      BFF_SEARCH_HOMES,
       expect.not.objectContaining({ search_query: expect.objectContaining({ dateRanges: expect.anything() }) }),
       expect.anything(),
       expect.anything()
@@ -62,7 +126,7 @@ describe('search tools', () => {
       exchange_type: 'GuestPoints', home_type: 'apartment', limit: 999, offset: -2,
     });
 
-    expect(apiMock.bffPost).toHaveBeenCalledWith('/search/homes', {
+    expect(apiMock.bffPost).toHaveBeenCalledWith(BFF_SEARCH_HOMES, {
       search_query: {
         dateRanges: [{ from: CHECKIN_AUG_2026, to: '2026-08-22' }],
         guests: { adults: 3, children: 0 },
@@ -150,7 +214,7 @@ describe('search tools', () => {
     });
     expect(apiMock.post).toHaveBeenCalledWith('/v2/favorites', { homeId: '3' });
     expect(apiMock.del).toHaveBeenCalledWith('/v2/favorites/4');
-    expect(apiMock.bff).toHaveBeenCalledWith('/search/saved-searches', { limit: '100' });
+    expect(apiMock.bff).toHaveBeenCalledWith(BFF_SAVED_SEARCHES, { limit: '100' });
   });
 
   it('rejects unknown search tools', async () => {
@@ -162,8 +226,8 @@ describe('search tools', () => {
     let snapshotFile = '';
 
     beforeEach(() => {
-      snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), 'he-saved-search-'));
-      snapshotFile = path.join(snapshotDir, 'saved-search-alerts.json');
+      snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), SAVED_SEARCH_TEMP_PREFIX));
+      snapshotFile = path.join(snapshotDir, SAVED_SEARCH_SNAPSHOT_FILE);
       process.env['HOMEEXCHANGE_SAVED_SEARCH_SNAPSHOT'] = snapshotFile;
       fetchMock.mockImplementation(() => {
         throw new Error('network is disabled');
@@ -176,67 +240,13 @@ describe('search tools', () => {
       fetchMock.mockReset();
     });
 
-    function savedSearch(externalId = 'search-1') {
-      return {
-        externalId,
-        userId: 100,
-        alertConfig: { enabled: true, locale: 'en', email: 'redacted' },
-        displayInformation: {
-          title: externalId === 'search-1' ? 'Portugal' : 'Lisbon',
-          description: 'Summer',
-        },
-        source: 'web',
-        searchCriteria: {
-          calendar: {
-            dateRanges: [
-              { from: '2026-07-01', to: '2026-07-15' },
-              { from: '2026-08-01', to: '2026-08-08' },
-            ],
-            flexibleSearch: { duration: 'P7D' },
-          },
-          location: { locationId: `loc-${externalId}`, provider: 'openstreetmap' },
-          guestCriteria: {
-            guests: { adults: 2, children: null, babies: 1 },
-            guestCount: 2,
-          },
-          additionalCriteria: { isLuxury: true },
-        },
-        queryParams: 'place=portugal',
-        alertLegacyId: 5,
-        createdAt: '2026-01-01T00:00:00Z',
-        updatedAt: '2026-01-02T00:00:00Z',
-      };
-    }
-
-    function readSnapshotContents(filePath: string): { parsed: unknown; mode: number } {
-      const fd = fs.openSync(filePath, 'r');
-      try {
-        return {
-          parsed: JSON.parse(fs.readFileSync(fd, 'utf8')) as unknown,
-          mode: fs.fstatSync(fd).mode & 0o777,
-        };
-      } finally {
-        fs.closeSync(fd);
-      }
-    }
-
-    function expectNoSensitiveCopy(value: unknown) {
-      const serialized = JSON.stringify(value);
-      expect(serialized).not.toContain('redacted');
-      expect(serialized).not.toContain('userId');
-      expect(serialized).not.toContain('queryParams');
-      expect(serialized).not.toContain('isLuxury');
-      expect(serialized).not.toContain('babies');
-      expect(serialized).not.toContain('flexibleSearch');
-    }
-
     it('keeps the snapshot file gitignored and away from session and env files', () => {
       delete process.env['HOMEEXCHANGE_SAVED_SEARCH_SNAPSHOT'];
       const filePath = savedSearchSnapshotPath();
-      expect(path.basename(filePath)).toBe('saved-search-alerts.json');
+      expect(path.basename(filePath)).toBe(SAVED_SEARCH_SNAPSHOT_FILE);
       const gitignore = fs.readFileSync(path.resolve(__dirname, '../../.gitignore'), 'utf8');
-      expect(gitignore).toContain('saved-search-alerts.json');
-      expect(searchTools.find((tool) => tool.name === 'check_saved_search_alerts')?.inputSchema)
+      expect(gitignore).toContain(SAVED_SEARCH_SNAPSHOT_FILE);
+      expect(searchTools.find((tool) => tool.name === CHECK_SAVED_SEARCH_ALERTS)?.inputSchema)
         .toMatchObject({
           properties: {
             saved_search_id: expect.any(Object),
@@ -249,7 +259,7 @@ describe('search tools', () => {
       fs.writeFileSync(snapshotFile, `${JSON.stringify({
         searches: { 'search-2': { homeIds: ['99'] } },
       })}\n`);
-      apiMock.bff.mockResolvedValue({ success: true, data: [savedSearch()] });
+      apiMock.bff.mockResolvedValue({ success: true, data: [savedSearchFixture()] });
       apiMock.bffPost
         .mockResolvedValueOnce({
           results: [
@@ -263,11 +273,11 @@ describe('search tools', () => {
           homes: [{ id: '11' }, { homeId: 13 }, { id: null }],
         });
 
-      const baseline = await handleSearch('check_saved_search_alerts', { limit: 25 });
+      const baseline = await handleSearch(CHECK_SAVED_SEARCH_ALERTS, { limit: 25 });
 
       expect(fetchMock).not.toHaveBeenCalled();
-      expect(apiMock.bff).toHaveBeenCalledWith('/search/saved-searches', { limit: '25' });
-      expect(apiMock.bffPost).toHaveBeenCalledWith('/search/homes', {
+      expect(apiMock.bff).toHaveBeenCalledWith(BFF_SAVED_SEARCHES, { limit: '25' });
+      expect(apiMock.bffPost).toHaveBeenCalledWith(BFF_SEARCH_HOMES, {
         search_query: {
           guests: { adults: 2, children: 0 },
           dateRanges: [{ from: '2026-07-01', to: '2026-07-15' }],
@@ -299,7 +309,7 @@ describe('search tools', () => {
       expect(baselineSnapshot.mode).toBe(0o600);
       expect(fs.readdirSync(snapshotDir).some((name) => name.endsWith('.tmp'))).toBe(false);
 
-      const updated = await handleSearch('check_saved_search_alerts', {});
+      const updated = await handleSearch(CHECK_SAVED_SEARCH_ALERTS, {});
 
       expect(fetchMock).not.toHaveBeenCalled();
       expect(apiMock.get).not.toHaveBeenCalled();
@@ -326,15 +336,20 @@ describe('search tools', () => {
     });
 
     it('skips a saved search when locationId is missing and does not use the network', async () => {
-      const search = savedSearch();
-      delete (search.searchCriteria.location as { locationId?: string }).locationId;
-      apiMock.bff.mockResolvedValue({ success: true, data: [search, savedSearch('search-2')] });
+      const search = {
+        ...savedSearchFixture(),
+        searchCriteria: {
+          ...savedSearchFixture().searchCriteria,
+          location: { provider: 'openstreetmap' },
+        },
+      };
+      apiMock.bff.mockResolvedValue({ success: true, data: [search, savedSearchFixture('search-2')] });
 
-      const result = await handleSearch('check_saved_search_alerts', { saved_search_id: 'search-1' });
+      const result = await handleSearch(CHECK_SAVED_SEARCH_ALERTS, { saved_search_id: 'search-1' });
 
       expect(fetchMock).not.toHaveBeenCalled();
       expect(apiMock.bffPost).not.toHaveBeenCalled();
-      expect(apiMock.bff).toHaveBeenCalledWith('/search/saved-searches', { limit: '100' });
+      expect(apiMock.bff).toHaveBeenCalledWith(BFF_SAVED_SEARCHES, { limit: '100' });
       expect(result).toEqual({
         results: [{
           savedSearchId: 'search-1',
@@ -352,11 +367,11 @@ describe('search tools', () => {
     it('checks only the saved search selected by externalId', async () => {
       apiMock.bff.mockResolvedValue({
         success: true,
-        data: [savedSearch(), savedSearch('search-2')],
+        data: [savedSearchFixture(), savedSearchFixture('search-2')],
       });
       apiMock.bffPost.mockResolvedValue({ results: [{ id: '4' }] });
 
-      const result = await handleSearch('check_saved_search_alerts', { saved_search_id: 'search-2' });
+      const result = await handleSearch(CHECK_SAVED_SEARCH_ALERTS, { saved_search_id: 'search-2' });
 
       expect(apiMock.bffPost).toHaveBeenCalledTimes(1);
       expect(apiMock.bffPost.mock.calls[0]?.[1]).toMatchObject({
@@ -375,9 +390,9 @@ describe('search tools', () => {
     });
 
     it('reports an unmatched saved search id without calling home search', async () => {
-      apiMock.bff.mockResolvedValue({ success: true, data: [savedSearch()] });
+      apiMock.bff.mockResolvedValue({ success: true, data: [savedSearchFixture()] });
 
-      await expect(handleSearch('check_saved_search_alerts', { saved_search_id: 'missing' }))
+      await expect(handleSearch(CHECK_SAVED_SEARCH_ALERTS, { saved_search_id: 'missing' }))
         .resolves.toEqual({
           results: [{
             savedSearchId: 'missing',
@@ -394,10 +409,10 @@ describe('search tools', () => {
 
     it('treats an unreadable snapshot as a baseline and drops non-string ids', async () => {
       fs.writeFileSync(snapshotFile, 'not-json');
-      apiMock.bff.mockResolvedValue({ success: true, data: [savedSearch()] });
+      apiMock.bff.mockResolvedValue({ success: true, data: [savedSearchFixture()] });
       apiMock.bffPost.mockResolvedValueOnce({ results: [{ homeId: 7 }] });
 
-      await expect(handleSearch('check_saved_search_alerts', {})).resolves.toMatchObject({
+      await expect(handleSearch(CHECK_SAVED_SEARCH_ALERTS, {})).resolves.toMatchObject({
         results: [{ baseline: true, newHomeIds: [], homeIds: ['7'] }],
       });
 
@@ -409,7 +424,7 @@ describe('search tools', () => {
       }));
       apiMock.bffPost.mockResolvedValueOnce({ results: [{ id: '8' }] });
 
-      const result = await handleSearch('check_saved_search_alerts', {});
+      const result = await handleSearch(CHECK_SAVED_SEARCH_ALERTS, {});
       expect(result).toMatchObject({
         results: [{ baseline: true, newHomeIds: [], homeIds: ['8'] }],
       });
@@ -417,16 +432,20 @@ describe('search tools', () => {
     });
 
     it('skips searches that cannot be re-run and ignores criteria the home search does not send', async () => {
-      const undated = savedSearch('search-3');
-      delete (undated.searchCriteria.location as { provider?: string }).provider;
-      undated.searchCriteria.calendar = { dateRanges: [], flexibleSearch: { duration: 'P7D' } };
-      const unnamed = savedSearch();
-      delete (unnamed as { externalId?: string }).externalId;
+      const undated = {
+        ...savedSearchFixture('search-3'),
+        searchCriteria: {
+          ...savedSearchFixture('search-3').searchCriteria,
+          location: { locationId: 'loc-search-3' },
+          calendar: { dateRanges: [], flexibleSearch: { duration: 'P7D' } },
+        },
+      };
+      const unnamed = savedSearchFixtureWithoutExternalId();
       apiMock.bff.mockResolvedValueOnce({ success: true });
       apiMock.bff.mockResolvedValueOnce({ success: true, data: [unnamed, undated] });
       apiMock.bffPost.mockResolvedValue({ results: [{ id: '5' }] });
 
-      await expect(handleSearch('check_saved_search_alerts', {})).resolves.toEqual({
+      await expect(handleSearch(CHECK_SAVED_SEARCH_ALERTS, {})).resolves.toEqual({
         results: [{
           savedSearchId: '',
           baseline: false,
@@ -437,7 +456,7 @@ describe('search tools', () => {
         }],
       });
 
-      const result = await handleSearch('check_saved_search_alerts', { saved_search_id: '   ' });
+      const result = await handleSearch(CHECK_SAVED_SEARCH_ALERTS, { saved_search_id: '   ' });
       expect(apiMock.bffPost).toHaveBeenCalledTimes(1);
       expect(apiMock.bffPost.mock.calls[0]?.[1]).toEqual({
         search_query: {
@@ -472,7 +491,7 @@ describe('search tools', () => {
     it.each(['session.json', '.env', '.env.local'])('refuses to store snapshots in %s', async (filename) => {
       process.env['HOMEEXCHANGE_SAVED_SEARCH_SNAPSHOT'] = path.join(snapshotDir, filename);
 
-      await expect(handleSearch('check_saved_search_alerts', {})).rejects.toThrow(
+      await expect(handleSearch(CHECK_SAVED_SEARCH_ALERTS, {})).rejects.toThrow(
         'session or environment files',
       );
       expect(apiMock.bff).not.toHaveBeenCalled();
