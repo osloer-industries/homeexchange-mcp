@@ -26,6 +26,7 @@ jobs:
     uses: osloer-industries/.github/.github/workflows/node-npm-quality.yml@a6ee91211fd9ba096ec141bacdb67985a82b6767 # v0.1.7
     with:
       check-npm-script: check
+      npm-prefixes-json: '["packages/eslint-sonarjs"]'
 
   codeql:
     uses: osloer-industries/.github/.github/workflows/codeql-javascript-typescript.yml@a6ee91211fd9ba096ec141bacdb67985a82b6767 # v0.1.7
@@ -40,7 +41,7 @@ jobs:
       contents: read
       pull-requests: read
     with:
-      coverage-npm-script: test
+      coverage-npm-script: coverage:sonar
       timeout-minutes: 20
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

@@ -21,16 +21,21 @@ on that repository (**v0.1.6**: `348b254ef112f4f8e239a41e7adb3f3e2dac3944`).
 | [`.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml) | `semantic-pull-request.yml` | Conventional Commits PR titles (`pull_request`; zizmor blocks `pull_request_target`). |
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | `release-please.yml` | `secrets.RELEASE_TOKEN` (not the org release GitHub App). |
 
-Former inlined jobs removed from this repo: standalone `codeql.yml`, inlined quality/Sonar in `ci.yml`, marketplace dependency-review and semantic-title steps, and inlined Release Please.
+Former inlined jobs removed from this repo: standalone `codeql.yml`, inlined
+quality/Sonar in `ci.yml`, marketplace dependency-review and semantic-title steps,
+and inlined Release Please.
 
 Dependabot `github-actions` updates on `/` bump Action SHAs and org reusable workflow SHAs (`ci(deps)`). Org reusables
 are grouped separately as `osloer-reusables` (`osloer-industries/.github*`).
 
-Branch protection should require only **`ci-passed`** on the `CI` workflow (not individual scanner job names). Until rulesets are updated, familiar checks still appear separately (`Quality`, `Analyze`, `CodeQL`, and so on).
+Branch protection should require only **`ci-passed`** on the `CI` workflow (not
+individual scanner job names). Until rulesets are updated, familiar checks still
+appear separately (`Quality`, `Analyze`, `CodeQL`, and so on).
 
 ## SonarCloud
 
-This project uses the **CI scanner** (`sonarqube-cloud-node.yml`), not SonarCloud Automatic Analysis alone. PRs also run `sonarcloud-zero-issues.yml` inside `ci-passed`.
+This project uses the **CI scanner** (`sonarqube-cloud-node.yml`), not SonarCloud
+Automatic Analysis alone. PRs also run `sonarcloud-zero-issues.yml` inside `ci-passed`.
 
 Configure [`sonar-project.properties`](../sonar-project.properties) and repository or organization secret `SONAR_TOKEN`.
 

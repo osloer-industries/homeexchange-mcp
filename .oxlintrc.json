@@ -1,0 +1,65 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["import", "typescript", "unicorn", "vitest"],
+  "jsPlugins": ["./scripts/oxlint-plugin-osloer.mts"],
+  "categories": {
+    "correctness": "error",
+    "perf": "warn",
+    "suspicious": "error"
+  },
+  "options": {
+    "reportUnusedDisableDirectives": "error",
+    "typeAware": true
+  },
+  "rules": {
+    "complexity": ["error", 15],
+    "import/no-cycle": "error",
+    "max-depth": ["error", 4],
+    "max-lines-per-function": [
+      "warn",
+      { "max": 80, "skipBlankLines": true, "skipComments": true }
+    ],
+    "max-params": ["warn", 5],
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/ban-ts-comment": [
+      "error",
+      { "ts-ignore": true, "ts-nocheck": true, "ts-expect-error": true, "ts-check": false }
+    ],
+    "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
+    "osloer/no-definite-assignment": "error",
+    "typescript/no-non-null-assertion": "error",
+    "unicorn/no-abusive-eslint-disable": "error",
+    "no-await-in-loop": "error",
+    "no-empty": ["error", { "allowEmptyCatch": false }],
+    "typescript/require-await": "error",
+    "vitest/no-focused-tests": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.spec.ts", "scripts/**/*.test.mjs", "packages/**/*.test.mjs"],
+      "rules": {
+        "max-lines-per-function": "off",
+        "max-params": "off"
+      }
+    },
+    {
+      "files": ["src/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/scripts/**"],
+                "message": "src/ must not import from scripts/ (see docs/architecture.md)."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": ["dist/**", "coverage/**", "node_modules/**", "packages/eslint-sonarjs/node_modules/**"]
+}

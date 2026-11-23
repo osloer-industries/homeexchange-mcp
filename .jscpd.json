@@ -1,0 +1,25 @@
+{
+  "absolute": true,
+  "format": ["markdown", "yaml", "bash"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/package-lock.json",
+    "packages/eslint-sonarjs/package-lock.json"
+  ],
+  "minLines": 8,
+  "minTokens": 70,
+  "mode": "strict",
+  "path": [
+    "docs",
+    "AGENTS.md",
+    "README.md",
+    "CHANGELOG.md",
+    "packages/eslint-sonarjs/README.md",
+    ".github/workflows",
+    "scripts"
+  ],
+  "reporters": ["console"],
+  "threshold": 0
+}

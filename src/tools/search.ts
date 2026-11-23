@@ -1,8 +1,28 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { type Tool } from '@modelcontextprotocol/sdk/types.js';
-import { api } from '../api';
-import { emptyInputTool, optionalLimitTool, requiredStringTool } from './tool-schema';
+import { api, z, zodTool, type Tool, type ToolArgs } from './tool-common';
+
+const searchArgsSchema = z.object({
+  adults: z.number().optional(),
+  children: z.number().optional(),
+  guests: z.number().optional(),
+  checkin: z.string().optional(),
+  checkout: z.string().optional(),
+  exchange_type: z.enum(['GuestPoints', 'simultaneous', 'non_simultaneous']).optional(),
+  home_id: z.string().optional(),
+  home_type: z.enum(['house', 'apartment', 'other']).optional(),
+  limit: z.number().optional(),
+  location: z.string().optional(),
+  offset: z.number().optional(),
+});
+const homeIdArgs = z.object({ home_id: z.string().min(1) });
+const limitArgs = z.object({ limit: z.number().optional() });
+const savedSearchAlertArgsSchema = z.object({
+  saved_search_id: z.string().optional(),
+  limit: z.number().optional(),
+});
+type Args = z.infer<typeof searchArgsSchema>;
+type SavedSearchAlertArgs = z.infer<typeof savedSearchAlertArgsSchema>;
 
 const SEARCH_HEADERS: Record<string, string> = {
   'X-SEARCH-API-VERSION': 'v2',
@@ -10,160 +30,64 @@ const SEARCH_HEADERS: Record<string, string> = {
 };
 
 export const searchTools: Tool[] = [
-  {
-    name: 'search_homes',
-    description: 'Search HomeExchange homes by location, dates, guests, and exchange type.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        location:      { type: 'string', description: 'City, region, or country name' },
-        checkin:       { type: 'string', description: 'Check-in date (YYYY-MM-DD)' },
-        checkout:      { type: 'string', description: 'Check-out date (YYYY-MM-DD)' },
-        guests:        { type: 'number', description: 'Total guests, retained for compatibility' },
-        adults:        { type: 'number', description: 'Number of adults (default 2)' },
-        children:      { type: 'number', description: 'Number of children (default 0)' },
-        exchange_type: { type: 'string', enum: ['GuestPoints', 'simultaneous', 'non_simultaneous'], description: 'Type of exchange' },
-        home_type:     { type: 'string', enum: ['house', 'apartment', 'other'], description: 'Property type' },
-        limit:         { type: 'number', description: 'Results per page (default 20, max 200)' },
-        offset:        { type: 'number', description: 'Pagination offset (default 0)' },
-      },
-    },
-  },
-  requiredStringTool('get_home', 'Get full details for a HomeExchange listing by home ID.', {
-    home_id: 'Numeric home ID',
-  }),
-  requiredStringTool('get_home_calendar', 'Get availability calendar for a home showing blocked and available dates.', {
-    home_id: 'Numeric home ID',
-  }),
-  optionalLimitTool('get_recommendations', 'Get personalised home recommendations based on your profile and history.', 'Number of recommendations (default 8)'),
-  emptyInputTool('list_my_homes', 'List your own HomeExchange listings.'),
-  optionalLimitTool('list_favorites', 'List your saved favourite homes.', 'Number of results (default 20)'),
-  requiredStringTool('add_favorite', 'Save a home to your favourites.', { home_id: 'Home ID to save' }),
-  requiredStringTool('remove_favorite', 'Remove a home from your favourites.', { home_id: 'Home ID to remove' }),
-  optionalLimitTool('list_saved_searches', 'List your saved search filters.', 'Number of results (default 100)'),
-  {
-    name: 'check_saved_search_alerts',
-    description: 'Re-run saved searches and compare home ids with a local snapshot. The first run stores a baseline. Later runs report ids that were not in the previous snapshot.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        saved_search_id: { type: 'string', description: 'Saved search externalId. Omit to check every loaded saved search.' },
-        limit: { type: 'number', description: 'Number of saved searches to load (default 100)' },
-      },
-    },
-  },
+  zodTool(
+    'search_homes',
+    'Search HomeExchange homes by location, dates, guests, and exchange type.',
+    searchArgsSchema,
+  ),
+  zodTool('get_home', 'Get full details for a HomeExchange listing by home ID.', homeIdArgs),
+  zodTool(
+    'get_home_calendar',
+    'Get availability calendar for a home showing blocked and available dates.',
+    homeIdArgs,
+  ),
+  zodTool(
+    'get_recommendations',
+    'Get personalised home recommendations based on your profile and history.',
+    limitArgs,
+  ),
+  zodTool('list_my_homes', 'List your own HomeExchange listings.', z.object({})),
+  zodTool('list_favorites', 'List your saved favourite homes.', limitArgs),
+  zodTool('add_favorite', 'Save a home to your favourites.', homeIdArgs),
+  zodTool('remove_favorite', 'Remove a home from your favourites.', homeIdArgs),
+  zodTool('list_saved_searches', 'List your saved search filters.', limitArgs),
+  zodTool(
+    'check_saved_search_alerts',
+    'Re-run saved searches and compare home ids with a local snapshot. The first run stores a baseline. Later runs report ids that were not in the previous snapshot.',
+    savedSearchAlertArgsSchema,
+  ),
 ];
 
-type Args = Record<string, unknown>;
+const geocodingFeatureSchema = z.object({
+  bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
+  geometry: z.object({ coordinates: z.tuple([z.number(), z.number()]) }),
+  properties: z.object({ id: z.string().optional(), source: z.string().optional() }),
+});
+const geocodingResponseSchema = z.object({ features: z.array(geocodingFeatureSchema).optional() });
+const optionalCoordinate = z.number().optional();
+const coordinateFields = {
+  lat: optionalCoordinate,
+  latitude: optionalCoordinate,
+  lng: optionalCoordinate,
+  longitude: optionalCoordinate,
+} as const;
+const searchHomeSchema = z.object({
+  ...coordinateFields,
+  location: z.object(coordinateFields).optional(),
+}).catchall(z.unknown());
+const searchResponseSchema = z.object({
+  homes: z.array(searchHomeSchema).optional(),
+  results: z.array(searchHomeSchema).optional(),
+}).catchall(z.unknown());
 
-interface GeocodingFeature {
-  bbox?: [number, number, number, number];
-  geometry: { coordinates: [number, number] };
-  properties: { id?: string; source?: string };
-}
-
-interface GeocodingResponse {
-  features?: GeocodingFeature[];
-}
-
-interface SearchHome {
-  lat?: number;
-  latitude?: number;
-  lng?: number;
-  longitude?: number;
-  location?: { lat?: number; latitude?: number; lng?: number; longitude?: number };
-  [key: string]: unknown;
-}
-
-interface SearchResponse {
-  homes?: SearchHome[];
-  results?: SearchHome[];
-  [key: string]: unknown;
-}
-
-interface GeocodedLocation {
+type GeocodedLocation = {
   bbox: { maxLat: number; maxLon: number; minLat: number; minLon: number };
   locationId: string;
   provider: string;
-}
-
-function limitArg(args: Args, defaultLimit: number): number {
-  return (args['limit'] as number | undefined) ?? defaultLimit;
-}
-
-function homeId(args: Args): string {
-  return args['home_id'] as string;
-}
-
-async function geocodeLocation(location: string): Promise<GeocodedLocation> {
-  const token = process.env['HOMEEXCHANGE_GEOCODING_TOKEN'];
-  if (!token) {
-    throw new Error(
-      'Searching by location requires HOMEEXCHANGE_GEOCODING_TOKEN. Set it to a personal geocoding API token before starting the MCP server.'
-    );
-  }
-
-  const url = new URL('https://api.jawg.io/places/v1/autocomplete');
-  url.searchParams.set('text', location);
-  url.searchParams.set('access-token', token);
-  url.searchParams.set('lang', 'en');
-  url.searchParams.set('size', '1');
-
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Could not geocode ${location}.`);
-
-  const feature = ((await response.json()) as GeocodingResponse).features?.[0];
-  if (!feature?.properties.id) throw new Error(`No location found for ${location}.`);
-
-  const [lon, lat] = feature.geometry.coordinates;
-  const [minLon, minLat, maxLon, maxLat] = feature.bbox ?? [lon - 0.25, lat - 0.25, lon + 0.25, lat + 0.25];
-  return {
-    locationId: feature.properties.id,
-    provider: feature.properties.source ?? 'openstreetmap',
-    bbox: { minLat, maxLat, minLon, maxLon },
-  };
-}
-
-function homeCoordinates(home: SearchHome): [number, number] | undefined {
-  const lat = home.lat ?? home.latitude ?? home.location?.lat ?? home.location?.latitude;
-  const lon = home.lng ?? home.longitude ?? home.location?.lng ?? home.location?.longitude;
-  return lat === undefined || lon === undefined ? undefined : [lat, lon];
-}
-
-function filterToLocation(response: SearchResponse, location: GeocodedLocation): SearchResponse {
-  const homes = response.results ?? response.homes;
-  if (!homes) return response;
-  const filtered = homes.filter((home) => {
-    const coordinates = homeCoordinates(home);
-    if (!coordinates) return false;
-    const [lat, lon] = coordinates;
-    const { minLat, maxLat, minLon, maxLon } = location.bbox;
-    return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
-  });
-  return response.results ? { ...response, results: filtered } : { ...response, homes: filtered };
-}
-
-function searchBody(
-  args: Args,
-  location?: { locationId: string; provider?: string },
-): Record<string, unknown> {
-  const query: Record<string, unknown> = {
-    guests: {
-      adults: (args['adults'] as number | undefined) ?? (args['guests'] as number | undefined) ?? 2,
-      children: (args['children'] as number | undefined) ?? 0,
-    },
-  };
-  if (args['checkin'] && args['checkout']) {
-    query['dateRanges'] = [{ from: args['checkin'], to: args['checkout'] }];
-  }
-  if (location) {
-    query['locationId'] = location.locationId;
-    if (location.provider) query['provider'] = location.provider;
-  }
-  if (args['exchange_type']) query['exchangeTypes'] = [args['exchange_type']];
-  if (args['home_type']) query['homeTypes'] = [args['home_type']];
-  return { search_query: query };
-}
+};
+type SearchHome = z.infer<typeof searchHomeSchema>;
+type SearchResponse = z.infer<typeof searchResponseSchema>;
+type SearchLocationRef = Pick<GeocodedLocation, 'locationId' | 'provider'>;
 
 const SAVED_SEARCH_SNAPSHOT = 'saved-search-alerts.json';
 const BLOCKED_SNAPSHOT_FILENAMES = new Set(['session.json', '.env']);
@@ -217,6 +141,94 @@ function savedSearchesFrom(response: unknown): SavedSearch[] | undefined {
   return response['data'].filter(isRecord) as SavedSearch[];
 }
 
+async function geocodeLocation(location: string): Promise<GeocodedLocation> {
+  const token = process.env['HOMEEXCHANGE_GEOCODING_TOKEN'];
+  if (!token) {
+    throw new Error(
+      'Searching by location requires HOMEEXCHANGE_GEOCODING_TOKEN. Set it to a personal geocoding API token before starting the MCP server.'
+    );
+  }
+
+  const url = new URL('https://api.jawg.io/places/v1/autocomplete');
+  url.searchParams.set('text', location);
+  url.searchParams.set('access-token', token);
+  url.searchParams.set('lang', 'en');
+  url.searchParams.set('size', '1');
+
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Could not geocode ${location}.`);
+
+  const body = geocodingResponseSchema.parse(await response.json());
+  const feature = body.features?.[0];
+  if (!feature?.properties.id) throw new Error(`No location found for ${location}.`);
+
+  const [lon, lat] = feature.geometry.coordinates;
+  const [minLon, minLat, maxLon, maxLat] = feature.bbox ?? [lon - 0.25, lat - 0.25, lon + 0.25, lat + 0.25];
+  return {
+    locationId: feature.properties.id,
+    provider: feature.properties.source ?? 'openstreetmap',
+    bbox: { minLat, maxLat, minLon, maxLon },
+  };
+}
+
+function homeCoordinates(home: SearchHome): [number, number] | undefined {
+  const lat = home.lat ?? home.latitude ?? home.location?.lat ?? home.location?.latitude;
+  const lon = home.lng ?? home.longitude ?? home.location?.lng ?? home.location?.longitude;
+  return lat === undefined || lon === undefined ? undefined : [lat, lon];
+}
+
+function filterToLocation(response: SearchResponse, location: GeocodedLocation): SearchResponse {
+  const homes = response.results ?? response.homes;
+  if (!homes) return response;
+  const filtered = homes.filter((home) => {
+    const coordinates = homeCoordinates(home);
+    if (!coordinates) return false;
+    const [lat, lon] = coordinates;
+    const { minLat, maxLat, minLon, maxLon } = location.bbox;
+    return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
+  });
+  return response.results ? { ...response, results: filtered } : { ...response, homes: filtered };
+}
+
+function searchBody(args: Args, location?: SearchLocationRef): Record<string, unknown> {
+  const query: Record<string, unknown> = {
+    guests: {
+      adults: args.adults ?? args.guests ?? 2,
+      children: args.children ?? 0,
+    },
+  };
+  if (args.checkin && args.checkout) {
+    query['dateRanges'] = [{ from: args.checkin, to: args.checkout }];
+  }
+  if (location) {
+    query['locationId'] = location.locationId;
+    if (location.provider) query['provider'] = location.provider;
+  }
+  if (args.exchange_type) query['exchangeTypes'] = [args.exchange_type];
+  if (args.home_type) query['homeTypes'] = [args.home_type];
+  return { search_query: query };
+}
+
+function numericParameter(args: Args, name: 'limit' | 'offset', fallback: number): number {
+  return args[name] ?? fallback;
+}
+
+async function searchHomes(args: Args): Promise<SearchResponse> {
+  const limit = Math.min(Math.max(numericParameter(args, 'limit', 20), 1), 200);
+  const offset = Math.max(numericParameter(args, 'offset', 0), 0);
+  const locationName = args.location;
+  const location = locationName ? await geocodeLocation(locationName) : undefined;
+  const response = await api.bffPost('/search/homes', searchBody(args, location), {
+    limit: String(limit), offset: String(offset),
+  }, SEARCH_HEADERS);
+  const parsedResponse = searchResponseSchema.parse(response);
+  return location ? filterToLocation(parsedResponse, location) : parsedResponse;
+}
+
+function parseHomeId(args: Args): string {
+  return homeIdArgs.parse(args).home_id;
+}
+
 function alertSearchBody(search: SavedSearch): Record<string, unknown> | undefined {
   const locationId = textValue(search.searchCriteria?.location?.locationId);
   if (!locationId) return undefined;
@@ -227,13 +239,13 @@ function alertSearchBody(search: SavedSearch): Record<string, unknown> | undefin
   const args: Args = {
     children: typeof guests?.children === 'number' ? guests.children : 0,
   };
-  if (typeof guests?.adults === 'number') args['adults'] = guests.adults;
+  if (typeof guests?.adults === 'number') args.adults = guests.adults;
 
   const from = textValue(range?.from);
   const to = textValue(range?.to);
   if (from && to) {
-    args['checkin'] = from;
-    args['checkout'] = to;
+    args.checkin = from;
+    args.checkout = to;
   }
 
   // flexibleSearch, isLuxury, babies, and queryParams are not sent.
@@ -246,14 +258,11 @@ function scalarId(value: unknown): string | undefined {
 }
 
 function homeIdentifier(home: SearchHome): string | undefined {
-  return scalarId(home['id']) ?? scalarId(home['homeId']);
+  return scalarId(home.id) ?? scalarId(home['homeId']);
 }
 
 function homeIdsFrom(response: SearchResponse): string[] {
-  let homes: SearchHome[] = [];
-  if (Array.isArray(response.results)) homes = response.results;
-  else if (Array.isArray(response.homes)) homes = response.homes;
-
+  const homes = response.results ?? response.homes ?? [];
   const ids: string[] = [];
   const seen = new Set<string>();
   for (const home of homes) {
@@ -356,10 +365,9 @@ async function compareSavedSearch(
     };
   }
 
-  const response = await api.bffPost<SearchResponse>('/search/homes', body, {
-    limit: '20',
-    offset: '0',
-  }, SEARCH_HEADERS);
+  const response = searchResponseSchema.parse(
+    await api.bffPost('/search/homes', body, { limit: '20', offset: '0' }, SEARCH_HEADERS),
+  );
   const homeIds = homeIdsFrom(response);
   const previous = snapshot.searches[savedSearchId]?.homeIds;
   const baseline = previous === undefined;
@@ -376,11 +384,15 @@ async function compareSavedSearch(
   };
 }
 
-async function checkSavedSearchAlerts(args: Args): Promise<{ results: SavedSearchAlertResult[] }> {
+async function checkSavedSearchAlerts(
+  args: SavedSearchAlertArgs,
+): Promise<{ results: SavedSearchAlertResult[] }> {
   const filePath = savedSearchSnapshotPath();
-  const limit = (args['limit'] as number | undefined) ?? 100;
-  const requestedId = textValue(args['saved_search_id']);
-  const loaded = savedSearchesFrom(await handleSearch('list_saved_searches', { limit }));
+  const limit = args.limit ?? 100;
+  const requestedId = textValue(args.saved_search_id);
+  const loaded = savedSearchesFrom(
+    await api.bff('/search/saved-searches', { limit: String(limit) }),
+  );
 
   if (!loaded) {
     return {
@@ -413,51 +425,23 @@ async function checkSavedSearchAlerts(args: Args): Promise<{ results: SavedSearc
   return { results };
 }
 
-export async function handleSearch(name: string, args: Args): Promise<unknown> {
-  switch (name) {
-    case 'search_homes': {
-      const limit = Math.min(Math.max((args['limit'] as number | undefined) ?? 20, 1), 200);
-      const offset = Math.max((args['offset'] as number | undefined) ?? 0, 0);
-      const location = args['location'] ? await geocodeLocation(args['location'] as string) : undefined;
-      const response = await api.bffPost<SearchResponse>('/search/homes', searchBody(args, location), {
-        limit: String(limit),
-        offset: String(offset),
-      }, SEARCH_HEADERS);
-      return location ? filterToLocation(response, location) : response;
-    }
+const handlers: Record<string, (args: Args) => Promise<unknown>> = {
+  search_homes: searchHomes,
+  get_home: (args) => api.bff(`/homes/${parseHomeId(args)}`),
+  get_home_calendar: (args) => api.get(`/v1/homes/${parseHomeId(args)}/calendar`),
+  get_recommendations: (args) => api.bffPost('/search/recommendation', {}, { limit: String(numericParameter(args, 'limit', 8)) }),
+  list_my_homes: () => api.bff('/v1/homes/me'),
+  list_favorites: (args) => api.get('/v2/favorites/me', { 'filters[status]': '1', 'order_by[createdAt]': 'DESC', limit: String(numericParameter(args, 'limit', 20)) }),
+  add_favorite: (args) => api.post('/v2/favorites', { homeId: parseHomeId(args) }),
+  remove_favorite: (args) => api.del(`/v2/favorites/${parseHomeId(args)}`),
+  list_saved_searches: (args) => api.bff('/search/saved-searches', { limit: String(numericParameter(args, 'limit', 100)) }),
+};
 
-    case 'get_home':
-      return api.bff(`/homes/${homeId(args)}`);
-
-    case 'get_home_calendar':
-      return api.get(`/v1/homes/${homeId(args)}/calendar`);
-
-    case 'get_recommendations':
-      return api.bffPost('/search/recommendation', {}, { limit: String(limitArg(args, 8)) });
-
-    case 'list_my_homes':
-      return api.bff('/v1/homes/me');
-
-    case 'list_favorites':
-      return api.get('/v2/favorites/me', {
-        'filters[status]': '1',
-        'order_by[createdAt]': 'DESC',
-        limit: String(limitArg(args, 20)),
-      });
-
-    case 'add_favorite':
-      return api.post('/v2/favorites', { homeId: homeId(args) });
-
-    case 'remove_favorite':
-      return api.del(`/v2/favorites/${homeId(args)}`);
-
-    case 'list_saved_searches':
-      return api.bff('/search/saved-searches', { limit: String(limitArg(args, 100)) });
-
-    case 'check_saved_search_alerts':
-      return checkSavedSearchAlerts(args);
-
-    default:
-      throw new Error(`Unknown search tool: ${name}`);
+export async function handleSearch(name: string, args: ToolArgs): Promise<unknown> {
+  if (name === 'check_saved_search_alerts') {
+    return checkSavedSearchAlerts(savedSearchAlertArgsSchema.parse(args));
   }
+  const handler = handlers[name];
+  if (!handler) throw new Error(`Unknown search tool: ${name}`);
+  return handler(searchArgsSchema.parse(args));
 }

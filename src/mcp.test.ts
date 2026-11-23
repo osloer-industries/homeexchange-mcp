@@ -1,10 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const toolMocks = vi.hoisted(() => ({
-  handleSearch: vi.fn(),
-  handleMessaging: vi.fn(),
-  handleUser: vi.fn(),
+  handleSearch: vi.fn<(name: string, args: unknown) => Promise<unknown>>(),
+  handleMessaging: vi.fn<(name: string, args: unknown) => Promise<unknown>>(),
+  handleUser: vi.fn<(name: string, args: unknown) => Promise<unknown>>(),
 }));
 
 vi.mock('./tools/search', () => ({
@@ -81,21 +82,20 @@ describe('MCP server', () => {
 
   it('connects the server to its transport', async () => {
     const server = createServer();
-    const connect = vi.spyOn(server, 'connect').mockResolvedValue();
     const write = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const transport = {} as Parameters<typeof main>[1];
+    const connect = vi.fn<(transport: StdioServerTransport) => Promise<void>>().mockResolvedValue(undefined);
 
-    await main(server, transport);
+    await main(server, connect);
 
-    expect(connect).toHaveBeenCalledWith(transport);
+    expect(connect).toHaveBeenCalledOnce();
     expect(write).toHaveBeenCalledWith('HomeExchange MCP server running (stdio)\n');
   });
 
   it('reports fatal startup errors and exits', () => {
     const write = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const exit = vi.spyOn(process, 'exit').mockImplementation((() => {
+    const exit = vi.spyOn(process, 'exit').mockImplementation((): never => {
       throw new Error('process exited');
-    }) as typeof process.exit);
+    });
 
     expect(() => reportFatal(new Error('broken'))).toThrow('process exited');
 

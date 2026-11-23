@@ -2,21 +2,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, SessionExpiredError } from './api';
 
 const { fetchMock } = vi.hoisted(() => ({
-  fetchMock: vi.fn(),
+  fetchMock: vi.fn<typeof fetch>(),
 }));
 
-function response(body: string, status = 200) {
-  return {
-    ok: status >= 200 && status < 300,
+function responseStatusText(status: number): string {
+  if (status === 500) return 'Internal Server Error';
+  if (status === 204) return 'No Content';
+  return 'OK';
+}
+
+function response(body: string | null, status = 200): Response {
+  return new Response(body, {
     status,
-    statusText: status === 500 ? 'Internal Server Error' : '',
-    text: vi.fn(async () => body),
-  };
+    statusText: responseStatusText(status),
+  });
 }
 
 vi.mock('fs', () => ({
-  existsSync: vi.fn(() => true),
-  readFileSync: vi.fn(() => JSON.stringify({
+  existsSync: vi.fn<() => boolean>(() => true),
+  readFileSync: vi.fn<() => string>(() => JSON.stringify({
     token: 'Bearer test-token',
     cookies: [
       { name: 'trusted', value: 'yes', domain: '.homeexchange.com' },
@@ -28,17 +32,31 @@ vi.mock('fs', () => ({
 
 vi.stubGlobal('fetch', fetchMock);
 
+const USERS_ME_PATH = '/v1/users/123';
+
+function isRequestInit(value: unknown): value is RequestInit {
+  return typeof value === 'object' && value !== null;
+}
+
+function fetchCall(index: number): [URL, RequestInit] {
+  const call: unknown = fetchMock.mock.calls[index];
+  if (!Array.isArray(call) || !(call[0] instanceof URL) || !isRequestInit(call[1])) {
+    throw new Error(`Expected fetch call ${index}`);
+  }
+  return [call[0], call[1]];
+}
+
 describe('api client', () => {
   beforeEach(() => {
     fetchMock.mockReset();
-    fetchMock.mockResolvedValue(response(JSON.stringify({ ok: true })));
+    fetchMock.mockImplementation(() => Promise.resolve(response(JSON.stringify({ ok: true }))));
   });
 
   it('sends authenticated requests only to the API origin', async () => {
-    await expect(api.get('/v1/users/123', { include: 'profile' })).resolves.toEqual({ ok: true });
+    await expect(api.get(USERS_ME_PATH, { include: 'profile' })).resolves.toEqual({ ok: true });
 
-    const [url, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
-    expect(url.toString()).toBe('https://api.homeexchange.com/v1/users/123?include=profile');
+    const [url, init] = fetchCall(0);
+    expect(url.toString()).toBe(`https://api.homeexchange.com${USERS_ME_PATH}?include=profile`);
     expect(init.headers).toMatchObject({
       Authorization: 'Bearer test-token',
       Cookie: 'trusted=yes',
@@ -49,11 +67,11 @@ describe('api client', () => {
     await api.bff('/v3/conversations/me');
     await api.bffPost('/v3/conversations', { message: 'hello' }, { locale: 'en' }, { 'X-Test': 'yes' });
 
-    expect((fetchMock.mock.calls[0]?.[0] as URL).origin).toBe('https://bff.homeexchange.com');
-    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+    expect(fetchCall(0)[0].origin).toBe('https://bff.homeexchange.com');
+    expect(fetchCall(1)[1]).toMatchObject({
       method: 'POST',
       body: JSON.stringify({ message: 'hello' }),
-      headers: expect.objectContaining({ 'X-Test': 'yes' }),
+      headers: expect.objectContaining({ 'x-test': 'yes' }),
     });
   });
 
@@ -61,16 +79,14 @@ describe('api client', () => {
     await api.bffPatch('/exchange/123/pre-approve', { approved: true }, { locale: 'en' });
     await api.bffPatch('/v1/conversations/123/archive');
 
-    const [firstUrl, firstInit] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    const [firstUrl, firstInit] = fetchCall(0);
     expect(firstUrl.toString()).toBe('https://bff.homeexchange.com/exchange/123/pre-approve?locale=en');
     expect(firstInit).toMatchObject({
       method: 'PATCH',
       body: JSON.stringify({ approved: true }),
     });
-    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
-      method: 'PATCH',
-      body: undefined,
-    });
+    expect(fetchCall(1)[1]).toMatchObject({ method: 'PATCH' });
+    expect(fetchCall(1)[1]).not.toHaveProperty('body');
   });
 
   it('supports API writes and deletes', async () => {
@@ -84,7 +100,7 @@ describe('api client', () => {
   it('reports an expired session without exposing the response body', async () => {
     fetchMock.mockResolvedValueOnce(response('private response', 401));
 
-    const error: unknown = await api.get('/v1/users/123').catch((caught: unknown) => caught);
+    const error: unknown = await api.get(USERS_ME_PATH).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(SessionExpiredError);
     expect(error).toMatchObject({
       name: 'SessionExpiredError',
@@ -95,11 +111,11 @@ describe('api client', () => {
   it('limits error response details', async () => {
     fetchMock.mockResolvedValueOnce(response('x'.repeat(300), 500));
 
-    await expect(api.get('/v1/users/123')).rejects.toThrow(`HTTP 500 Internal Server Error: ${'x'.repeat(200)}`);
+    await expect(api.get(USERS_ME_PATH)).rejects.toThrow(`HTTP 500 Internal Server Error: ${'x'.repeat(200)}`);
   });
 
   it('handles successful empty responses', async () => {
-    fetchMock.mockResolvedValueOnce(response('', 204));
+    fetchMock.mockResolvedValueOnce(response(null, 204));
 
     await expect(api.del('/v1/messages/123')).resolves.toEqual({});
   });
