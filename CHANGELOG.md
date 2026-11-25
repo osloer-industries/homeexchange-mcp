@@ -2,6 +2,18 @@
 
 All notable changes to homeexchange-mcp are documented here.
 
+## [0.2.0](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.7...v0.2.0) (2026-11-24)
+
+
+### Features
+
+* **lint:** complete type escape-hatch hardening ([#120](https://github.com/osloer-industries/homeexchange-mcp/issues/120)) ([a27f6b7](https://github.com/osloer-industries/homeexchange-mcp/commit/a27f6b7e892e463726fc151edd0a0df2ece0fe5f))
+
+
+### Bug Fixes
+
+* **deps:** clear undici and js-yaml Dependabot alerts via parent bumps ([#123](https://github.com/osloer-industries/homeexchange-mcp/issues/123)) ([f91e3fe](https://github.com/osloer-industries/homeexchange-mcp/commit/f91e3febef1890355b7e10971354cb4b48bdbdb2))
+
 ## [0.1.7](https://github.com/osloer-industries/homeexchange-mcp/compare/v0.1.6...v0.1.7) (2026-11-20)
 
 
